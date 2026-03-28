@@ -1,0 +1,39 @@
+# 🎬 CineB - Hệ thống quản lý và kiểm soát vé Rạp chiếu phim ()
+
+Dự án phát triển hệ thống quản lý rạp chiếu phim CineB. Đây là Bài tập lớn 2 (BTL2) môn Cơ sở dữ liệu, bao gồm việc thiết kế Database, viết các câu truy vấn phức tạp và xây dựng giao diện quản lý (CRUD) và hiển thị cho người dùng.
+
+## 📦 Cấu trúc dự án
+
+Dự án được chia làm 2 phần chính:
+- **`frontend/`**: Ứng dụng Single Page Application (SPA) xây dựng bằng ReactJS & Vite, đóng vai trò hiển thị danh sách lịch chiếu và giao diện quản lý CRUD cho nhân viên. 
+    - Hiển thị lịch chiếu (ShowtimeListPage): Cho phép người dùng xem và lọc lịch chiếu theo rạp, tên phim, khoảng thời gian và trạng thái (OPEN, CLOSED, CANCELLED). Hỗ trợ sắp xếp theo thời gian hoặc giá vé.
+    - Quản lý lịch chiếu (ShowtimeCrudPage): Giao diện dành cho Admin/Nhân viên để Thêm, Sửa, Xóa lịch chiếu khỏi hệ thống
+    
+- **`backend/`**: Xử lý logic máy chủ và kết nối với cơ sở dữ liệu (chứa các file thiết lập SQL và cấu hình kết nối `db.js`).
+
+## 🛠 Công nghệ sử dụng
+- **Frontend:** ReactJS, Vite, CSS.
+- **Backend:** Node.js (hoặc Express.js).
+- **Database:** SQLServer 2022.
+
+## 🚀 Hướng dẫn cài đặt và khởi chạy
+
+Vui lòng đảm bảo máy của bạn đã cài đặt sẵn **Node.js**, **npm**  và hệ quản trị CSDL tương ứng.
+
+### 1. Thiết lập Database (Backend)
+1. Mở hệ quản trị CSDL của bạn (ví dụ: MySQL Workbench, pgAdmin).
+2. Chạy file `CineB_database.sql` để khởi tạo cấu trúc các bảng.
+3. Chạy lần lượt các file script chứa câu lệnh query/trigger/procedure của BTL:
+   - `2_1.sql`
+   - `2_2.sql`
+   - `2_3.sql`
+   - `2_4.sql`
+4. Copy file `.env.example` thành `.env` trong thư mục `backend/` và điền thông tin kết nối CSDL của bạn (User, Password, Port).
+
+### 2. Khởi chạy Frontend
+Mở terminal, di chuyển vào thư mục `frontend` và chạy các lệnh sau:
+
+```bash
+cd frontend
+npm install   # Cài đặt các thư viện phụ thuộc
+npm run dev   # Khởi chạy server phát triển (Vite)

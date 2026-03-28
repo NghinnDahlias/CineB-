@@ -1,0 +1,1 @@
+// Nơi chứa các hàm fetch gọi API xuống Backend để lấy dữ liệu kết quả từ 6 câu truy vấn SQL kia.
