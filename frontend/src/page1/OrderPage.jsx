@@ -1,4 +1,10 @@
-import { useMemo, useState } from "react";
+/**
+ * PAGE 1 — UI bảng ORDER (tab “Page 1” trong App.jsx).
+ * Phụ thuộc: ./orderApi.js (chỉ page này dùng), ./page1.css, styles/global.css (chung).
+ */
+import { useCallback, useEffect, useMemo, useState } from "react";
+import * as orderApi from "./orderApi.js";
+import "./page1.css";
 
 const STATUS_UPDATE_OPTIONS = [
   { value: "", label: "— Giữ nguyên —" },
@@ -14,64 +20,60 @@ function formatMoney(n) {
 
 function formatDate(isoOrDate) {
   const d = new Date(isoOrDate);
-  if (Number.isNaN(d.getTime())) return String(isoOrDate);
+  if (Number.isNaN(d.getTime())) return String(isoOrDate ?? "—");
   return d.toLocaleString("vi-VN");
 }
 
-function parseMoneyInput(raw) {
+/** Số nguyên (có thể âm) — để demo RAISERROR từ SQL, không chặn âm ở client */
+function parseIntegerInput(raw) {
   const s = String(raw).trim();
   if (s === "") return { ok: true, empty: true, value: 0 };
-  if (!/^\d+(\.\d+)?$/.test(s)) {
+  if (!/^-?\d+$/.test(s)) {
     return { ok: false, empty: false, value: 0 };
   }
   const n = Number(s);
-  if (n < 0) return { ok: false, empty: false, value: 0 };
+  if (!Number.isFinite(n)) {
+    return { ok: false, empty: false, value: 0 };
+  }
   return { ok: true, empty: false, value: n };
 }
 
-const initialOrders = [
-  {
-    orderId: "DH001",
-    customerId: "KH001",
-    totalAmount: 520000,
-    discountAmount: 20000,
-    finalAmount: 500000,
-    createdAt: new Date("2026-04-18T10:30:00").toISOString(),
-    status: "ĐANG CHỜ",
-    promoCode: "KM04"
-  },
-  {
-    orderId: "DH002",
-    customerId: "KH002",
-    totalAmount: 180000,
-    discountAmount: 0,
-    finalAmount: 180000,
-    createdAt: new Date("2026-04-19T14:00:00").toISOString(),
-    status: "ĐÃ THANH TOÁN",
-    promoCode: "—"
-  }
-];
-
-let idCounter = 3;
-
-function nextOrderId() {
-  const n = idCounter;
-  idCounter += 1;
-  return `DH${String(n).padStart(3, "0")}`;
-}
-
 export default function OrderPage() {
-  const [orders, setOrders] = useState(initialOrders);
+  const [orders, setOrders] = useState([]);
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState("");
+
   const [modal, setModal] = useState(null);
 
   const [insert, setInsert] = useState({ customerId: "", total: "", discount: "" });
   const [insertErrors, setInsertErrors] = useState({});
+  const [insertBusy, setInsertBusy] = useState(false);
 
   const [update, setUpdate] = useState({ orderId: "", total: "", discount: "", status: "" });
   const [updateErrors, setUpdateErrors] = useState({});
+  const [updateBusy, setUpdateBusy] = useState(false);
 
   const [del, setDel] = useState({ orderId: "" });
   const [delErrors, setDelErrors] = useState({});
+  const [delBusy, setDelBusy] = useState(false);
+
+  const loadOrders = useCallback(async () => {
+    setListLoading(true);
+    setListError("");
+    try {
+      const data = await orderApi.fetchOrders();
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setListError(e.message || "Không tải được danh sách.");
+      setOrders([]);
+    } finally {
+      setListLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
 
   const closeModal = () => {
     setModal(null);
@@ -98,114 +100,94 @@ export default function OrderPage() {
     setModal("delete");
   };
 
-  const submitInsert = () => {
+  const submitInsert = async () => {
     const err = {};
-    const c = insert.customerId.trim();
-    if (!c) err.customerId = "Bắt buộc";
+    const customerId = String(insert.customerId ?? "").trim();
+    if (!customerId) err.customerId = "Bắt buộc";
 
-    const t = parseMoneyInput(insert.total);
-    if (!t.ok) err.total = "Chỉ nhập số ≥ 0";
+    const t = parseIntegerInput(insert.total);
+    if (!t.ok) err.total = "Nhập số nguyên lớn hơn bằng 0";
     else if (t.empty) err.total = "Bắt buộc";
 
-    const d = parseMoneyInput(insert.discount);
-    if (!d.ok) err.discount = "Chỉ nhập số ≥ 0";
+    const d = parseIntegerInput(insert.discount);
+    if (!d.ok) err.discount = "Nhập số nguyên lớn hơn bằng 0";
     else if (d.empty) err.discount = "Bắt buộc";
-
-    if (t.ok && !t.empty && d.ok && !d.empty && d.value > t.value) {
-      err.discount = "Không được lớn hơn tổng tiền";
-    }
 
     setInsertErrors(err);
     if (Object.keys(err).length > 0) return;
 
-    const totalAmount = t.value;
-    const discountAmount = d.value;
-    const finalAmount = totalAmount - discountAmount;
-
-    setOrders((prev) => [
-      {
-        orderId: nextOrderId(),
-        customerId: c,
-        totalAmount,
-        discountAmount,
-        finalAmount,
-        createdAt: new Date().toISOString(),
-        status: "ĐANG CHỜ",
-        promoCode: "—"
-      },
-      ...prev
-    ]);
-    closeModal();
+    setInsertBusy(true);
+    try {
+      await orderApi.createOrder({
+        customerId,
+        total: t.value,
+        discount: d.value
+      });
+      await loadOrders();
+      closeModal();
+    } catch (e) {
+      setInsertErrors({ api: e.message || "Lỗi server." });
+    } finally {
+      setInsertBusy(false);
+    }
   };
 
-  const submitUpdate = () => {
+  const submitUpdate = async () => {
     const err = {};
-    const oid = update.orderId.trim();
-    if (!oid) err.orderId = "Bắt buộc";
+    const orderId = String(update.orderId ?? "").trim();
+    if (!orderId) err.orderId = "Bắt buộc";
 
     let totalParsed = null;
     if (String(update.total).trim() !== "") {
-      const t = parseMoneyInput(update.total);
-      if (!t.ok || t.empty) err.total = "Chỉ nhập số ≥ 0";
+      const t = parseIntegerInput(update.total);
+      if (!t.ok || t.empty) err.total = "Nhập số nguyên lớn hơn bằng 0";
       else totalParsed = t.value;
     }
 
     let discountParsed = null;
     if (String(update.discount).trim() !== "") {
-      const d = parseMoneyInput(update.discount);
-      if (!d.ok || d.empty) err.discount = "Chỉ nhập số ≥ 0";
+      const d = parseIntegerInput(update.discount);
+      if (!d.ok || d.empty) err.discount = "Nhập số nguyên lớn hơn bằng 0";
       else discountParsed = d.value;
     }
 
     setUpdateErrors(err);
     if (Object.keys(err).length > 0) return;
 
-    const idx = orders.findIndex((o) => o.orderId === oid);
-    if (idx === -1) {
-      setUpdateErrors({ orderId: "Không tìm thấy mã đơn hàng" });
-      return;
+    const body = {};
+    if (totalParsed !== null) body.total = totalParsed;
+    if (discountParsed !== null) body.discount = discountParsed;
+    if (String(update.status).trim() !== "") body.status = update.status.trim();
+
+    setUpdateBusy(true);
+    try {
+      await orderApi.updateOrder(orderId, body);
+      await loadOrders();
+      closeModal();
+    } catch (e) {
+      setUpdateErrors({ api: e.message || "Lỗi server." });
+    } finally {
+      setUpdateBusy(false);
     }
-
-    const row = orders[idx];
-    const nextTotal = totalParsed !== null ? totalParsed : row.totalAmount;
-    const nextDiscount = discountParsed !== null ? discountParsed : row.discountAmount;
-
-    if (nextDiscount > nextTotal) {
-      setUpdateErrors({ discount: "Không được lớn hơn tổng tiền" });
-      return;
-    }
-
-    const nextStatus = update.status ? update.status : row.status;
-
-    setOrders((prev) => {
-      const copy = [...prev];
-      copy[idx] = {
-        ...row,
-        totalAmount: nextTotal,
-        discountAmount: nextDiscount,
-        finalAmount: nextTotal - nextDiscount,
-        status: nextStatus
-      };
-      return copy;
-    });
-    closeModal();
   };
 
-  const submitDelete = () => {
+  const submitDelete = async () => {
     const err = {};
-    const oid = del.orderId.trim();
-    if (!oid) err.orderId = "Bắt buộc";
+    const orderId = String(del.orderId ?? "").trim();
+    if (!orderId) err.orderId = "Bắt buộc";
     setDelErrors(err);
     if (Object.keys(err).length > 0) return;
 
-    const idx = orders.findIndex((o) => o.orderId === oid);
-    if (idx === -1) {
-      setDelErrors({ orderId: "Không tìm thấy mã đơn hàng" });
-      return;
+    setDelBusy(true);
+    try {
+      await orderApi.removeOrder(orderId);
+      await loadOrders();
+      closeModal();
+    } catch (e) {
+      setDelErrors({ api: e.message || "Lỗi server." });
+    } finally {
+      setDelBusy(false);
     }
-
-    setOrders((prev) => prev.filter((o) => o.orderId !== oid));
-    closeModal();
   };
 
   const sortedOrders = useMemo(
@@ -218,6 +200,9 @@ export default function OrderPage() {
       <div className="order-page-toolbar">
         <h2 className="order-page-title">Bảng đơn hàng (Order)</h2>
         <div className="order-page-actions">
+          <button type="button" className="ghost-btn" onClick={loadOrders} disabled={listLoading}>
+            {listLoading ? "Đang tải…" : "Tải lại"}
+          </button>
           <button type="button" className="primary-btn" onClick={openInsert}>
             INSERT
           </button>
@@ -229,6 +214,8 @@ export default function OrderPage() {
           </button>
         </div>
       </div>
+
+      {listError ? <div className="feedback error">{listError}</div> : null}
 
       <div className="table-wrap">
         <table className="order-table">
@@ -245,6 +232,14 @@ export default function OrderPage() {
             </tr>
           </thead>
           <tbody>
+            {sortedOrders.length === 0 && !listLoading && !listError ? (
+              <tr>
+                <td colSpan={8} className="muted" style={{ textAlign: "center" }}>
+                  Chưa có dòng nào trong bảng ORDER (DB đang trống) hoặc API chưa trả JSON. Thử INSERT từ nút trên, hoặc kiểm tra
+                  backend <code style={{ color: "var(--accent)" }}>GET /api/orders</code> trên cổng 3000.
+                </td>
+              </tr>
+            ) : null}
             {sortedOrders.map((row) => (
               <tr key={row.orderId}>
                 <td>{row.orderId}</td>
@@ -254,7 +249,7 @@ export default function OrderPage() {
                 <td>{formatMoney(row.finalAmount)}</td>
                 <td>{formatDate(row.createdAt)}</td>
                 <td>{row.status}</td>
-                <td>{row.promoCode}</td>
+                <td>{row.promoCode ?? "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -273,20 +268,21 @@ export default function OrderPage() {
             <h3 id="modal-insert-title" className="modal-title">
               Thêm đơn hàng
             </h3>
+            {insertErrors.api ? <div className="feedback error">{insertErrors.api}</div> : null}
             <div className="modal-fields">
               <label className="field-wrap">
                 <span>MÃ SỐ KHÁCH HÀNG *</span>
                 <input
                   value={insert.customerId}
                   onChange={(e) => setInsert((s) => ({ ...s, customerId: e.target.value }))}
-                  placeholder="VD: KH001"
+                  placeholder="VD: C0000001"
                 />
                 {insertErrors.customerId ? <small className="error-text">{insertErrors.customerId}</small> : null}
               </label>
               <label className="field-wrap">
-                <span>TỔNG TIỀN * (số)</span>
+                <span>TỔNG TIỀN *</span>
                 <input
-                  inputMode="decimal"
+                  inputMode="numeric"
                   value={insert.total}
                   onChange={(e) => setInsert((s) => ({ ...s, total: e.target.value }))}
                   placeholder="VD: 500000"
@@ -294,9 +290,9 @@ export default function OrderPage() {
                 {insertErrors.total ? <small className="error-text">{insertErrors.total}</small> : null}
               </label>
               <label className="field-wrap">
-                <span>SỐ TIỀN GIẢM * (số)</span>
+                <span>SỐ TIỀN GIẢM *</span>
                 <input
-                  inputMode="decimal"
+                  inputMode="numeric"
                   value={insert.discount}
                   onChange={(e) => setInsert((s) => ({ ...s, discount: e.target.value }))}
                   placeholder="VD: 20000"
@@ -305,11 +301,11 @@ export default function OrderPage() {
               </label>
             </div>
             <div className="modal-actions">
-              <button type="button" className="ghost-btn" onClick={closeModal}>
+              <button type="button" className="ghost-btn" onClick={closeModal} disabled={insertBusy}>
                 Hủy
               </button>
-              <button type="button" className="primary-btn" onClick={submitInsert}>
-                Lưu
+              <button type="button" className="primary-btn" onClick={submitInsert} disabled={insertBusy}>
+                {insertBusy ? "Đang lưu…" : "Lưu"}
               </button>
             </div>
           </div>
@@ -328,33 +324,34 @@ export default function OrderPage() {
             <h3 id="modal-update-title" className="modal-title">
               Cập nhật đơn hàng
             </h3>
+            {updateErrors.api ? <div className="feedback error">{updateErrors.api}</div> : null}
             <div className="modal-fields">
               <label className="field-wrap">
                 <span>MÃ ĐƠN HÀNG *</span>
                 <input
                   value={update.orderId}
                   onChange={(e) => setUpdate((s) => ({ ...s, orderId: e.target.value }))}
-                  placeholder="VD: DH001"
+                  placeholder="VD: O00001"
                 />
                 {updateErrors.orderId ? <small className="error-text">{updateErrors.orderId}</small> : null}
               </label>
               <label className="field-wrap">
-                <span>TỔNG TIỀN (số, tùy chọn)</span>
+                <span>TỔNG TIỀN (để trống nếu giữ nguyên)</span>
                 <input
-                  inputMode="decimal"
+                  inputMode="numeric"
                   value={update.total}
                   onChange={(e) => setUpdate((s) => ({ ...s, total: e.target.value }))}
-                  placeholder="Để trống nếu giữ nguyên"
+                  placeholder="VD: 500000"
                 />
                 {updateErrors.total ? <small className="error-text">{updateErrors.total}</small> : null}
               </label>
               <label className="field-wrap">
-                <span>SỐ TIỀN GIẢM (số, tùy chọn)</span>
+                <span>SỐ TIỀN GIẢM (để trống nếu giữ nguyên)</span>
                 <input
-                  inputMode="decimal"
+                  inputMode="numeric"
                   value={update.discount}
                   onChange={(e) => setUpdate((s) => ({ ...s, discount: e.target.value }))}
-                  placeholder="Để trống nếu giữ nguyên"
+                  placeholder="VD: 20000"
                 />
                 {updateErrors.discount ? <small className="error-text">{updateErrors.discount}</small> : null}
               </label>
@@ -373,11 +370,11 @@ export default function OrderPage() {
               </label>
             </div>
             <div className="modal-actions">
-              <button type="button" className="ghost-btn" onClick={closeModal}>
+              <button type="button" className="ghost-btn" onClick={closeModal} disabled={updateBusy}>
                 Hủy
               </button>
-              <button type="button" className="warning-btn" onClick={submitUpdate}>
-                Cập nhật
+              <button type="button" className="warning-btn" onClick={submitUpdate} disabled={updateBusy}>
+                {updateBusy ? "Đang cập nhật…" : "Cập nhật"}
               </button>
             </div>
           </div>
@@ -396,23 +393,24 @@ export default function OrderPage() {
             <h3 id="modal-delete-title" className="modal-title">
               Xóa đơn hàng
             </h3>
+            {delErrors.api ? <div className="feedback error">{delErrors.api}</div> : null}
             <div className="modal-fields">
               <label className="field-wrap">
                 <span>MÃ ĐƠN HÀNG *</span>
                 <input
                   value={del.orderId}
                   onChange={(e) => setDel((s) => ({ ...s, orderId: e.target.value }))}
-                  placeholder="VD: DH001"
+                  placeholder="VD: O00001"
                 />
                 {delErrors.orderId ? <small className="error-text">{delErrors.orderId}</small> : null}
               </label>
             </div>
             <div className="modal-actions">
-              <button type="button" className="ghost-btn" onClick={closeModal}>
+              <button type="button" className="ghost-btn" onClick={closeModal} disabled={delBusy}>
                 Hủy
               </button>
-              <button type="button" className="danger-btn" onClick={submitDelete}>
-                Xóa
+              <button type="button" className="danger-btn" onClick={submitDelete} disabled={delBusy}>
+                {delBusy ? "Đang xóa…" : "Xóa"}
               </button>
             </div>
           </div>
