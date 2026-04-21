@@ -23,17 +23,9 @@ router.get("/", async (req, res) => {
  */
 router.post("/", async (req, res) => {
   try {
-    const { customerId, total, discount } = req.body;
-    const tongTien = Number(total);
-    const soTienGiam = Number(discount);
-    if (!Number.isFinite(tongTien) || !Number.isFinite(soTienGiam)) {
-      res.status(400).json({ ok: false, error: "Tổng tiền và số tiền giảm phải là số hợp lệ." });
-      return;
-    }
+    const { customerId } = req.body;
     await orderService.insertOrder({
       maKhachHang: String(customerId ?? "").trim(),
-      tongTien,
-      soTienGiam
     });
     res.status(201).json({ ok: true });
   } catch (err) {
@@ -48,26 +40,19 @@ router.post("/", async (req, res) => {
 router.patch("/:orderId", async (req, res) => {
   try {
     const orderId = String(req.params.orderId ?? "").trim();
-    const { total, discount, status } = req.body;
-
-    const tongTien =
-      total === undefined || total === null || String(total).trim() === ""
-        ? null
-        : Number(total);
-    const soTienGiam =
-      discount === undefined || discount === null || String(discount).trim() === ""
-        ? null
-        : Number(discount);
+    const { status, promoCode } = req.body;
     const trangThai =
       status === undefined || status === null || String(status).trim() === ""
         ? null
         : String(status).trim();
-
+    const maKhuyenMai =
+      promoCode === undefined || promoCode === null || String(promoCode).trim() === ""
+        ? null
+        : String(promoCode).trim();
     await orderService.updateOrder({
       maDonHang: orderId,
-      tongTien: Number.isFinite(tongTien) ? tongTien : null,
-      soTienGiam: Number.isFinite(soTienGiam) ? soTienGiam : null,
-      trangThai
+      trangThai,
+      maKhuyenMai
     });
     res.json({ ok: true });
   } catch (err) {

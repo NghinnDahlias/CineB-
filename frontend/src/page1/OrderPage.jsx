@@ -83,13 +83,13 @@ export default function OrderPage() {
   };
 
   const openInsert = () => {
-    setInsert({ customerId: "", total: "", discount: "" });
+    setInsert({ customerId: ""});//, total: "", discount: "" });
     setInsertErrors({});
     setModal("insert");
   };
 
   const openUpdate = () => {
-    setUpdate({ orderId: "", total: "", discount: "", status: "" });
+    setUpdate({ orderId: "", status: "", promoCode: "" });
     setUpdateErrors({});
     setModal("update");
   };
@@ -104,15 +104,6 @@ export default function OrderPage() {
     const err = {};
     const customerId = String(insert.customerId ?? "").trim();
     if (!customerId) err.customerId = "Bắt buộc";
-
-    const t = parseIntegerInput(insert.total);
-    if (!t.ok) err.total = "Nhập số nguyên lớn hơn bằng 0";
-    else if (t.empty) err.total = "Bắt buộc";
-
-    const d = parseIntegerInput(insert.discount);
-    if (!d.ok) err.discount = "Nhập số nguyên lớn hơn bằng 0";
-    else if (d.empty) err.discount = "Bắt buộc";
-
     setInsertErrors(err);
     if (Object.keys(err).length > 0) return;
 
@@ -120,8 +111,6 @@ export default function OrderPage() {
     try {
       await orderApi.createOrder({
         customerId,
-        total: t.value,
-        discount: d.value
       });
       await loadOrders();
       closeModal();
@@ -136,29 +125,12 @@ export default function OrderPage() {
     const err = {};
     const orderId = String(update.orderId ?? "").trim();
     if (!orderId) err.orderId = "Bắt buộc";
-
-    let totalParsed = null;
-    if (String(update.total).trim() !== "") {
-      const t = parseIntegerInput(update.total);
-      if (!t.ok || t.empty) err.total = "Nhập số nguyên lớn hơn bằng 0";
-      else totalParsed = t.value;
-    }
-
-    let discountParsed = null;
-    if (String(update.discount).trim() !== "") {
-      const d = parseIntegerInput(update.discount);
-      if (!d.ok || d.empty) err.discount = "Nhập số nguyên lớn hơn bằng 0";
-      else discountParsed = d.value;
-    }
-
     setUpdateErrors(err);
     if (Object.keys(err).length > 0) return;
 
     const body = {};
-    if (totalParsed !== null) body.total = totalParsed;
-    if (discountParsed !== null) body.discount = discountParsed;
     if (String(update.status).trim() !== "") body.status = update.status.trim();
-
+    if (String(update.promoCode).trim() !== "") body.promoCode = update.promoCode.trim();
     setUpdateBusy(true);
     try {
       await orderApi.updateOrder(orderId, body);
@@ -279,26 +251,6 @@ export default function OrderPage() {
                 />
                 {insertErrors.customerId ? <small className="error-text">{insertErrors.customerId}</small> : null}
               </label>
-              <label className="field-wrap">
-                <span>TỔNG TIỀN *</span>
-                <input
-                  inputMode="numeric"
-                  value={insert.total}
-                  onChange={(e) => setInsert((s) => ({ ...s, total: e.target.value }))}
-                  placeholder="VD: 500000"
-                />
-                {insertErrors.total ? <small className="error-text">{insertErrors.total}</small> : null}
-              </label>
-              <label className="field-wrap">
-                <span>SỐ TIỀN GIẢM *</span>
-                <input
-                  inputMode="numeric"
-                  value={insert.discount}
-                  onChange={(e) => setInsert((s) => ({ ...s, discount: e.target.value }))}
-                  placeholder="VD: 20000"
-                />
-                {insertErrors.discount ? <small className="error-text">{insertErrors.discount}</small> : null}
-              </label>
             </div>
             <div className="modal-actions">
               <button type="button" className="ghost-btn" onClick={closeModal} disabled={insertBusy}>
@@ -336,26 +288,6 @@ export default function OrderPage() {
                 {updateErrors.orderId ? <small className="error-text">{updateErrors.orderId}</small> : null}
               </label>
               <label className="field-wrap">
-                <span>TỔNG TIỀN (để trống nếu giữ nguyên)</span>
-                <input
-                  inputMode="numeric"
-                  value={update.total}
-                  onChange={(e) => setUpdate((s) => ({ ...s, total: e.target.value }))}
-                  placeholder="VD: 500000"
-                />
-                {updateErrors.total ? <small className="error-text">{updateErrors.total}</small> : null}
-              </label>
-              <label className="field-wrap">
-                <span>SỐ TIỀN GIẢM (để trống nếu giữ nguyên)</span>
-                <input
-                  inputMode="numeric"
-                  value={update.discount}
-                  onChange={(e) => setUpdate((s) => ({ ...s, discount: e.target.value }))}
-                  placeholder="VD: 20000"
-                />
-                {updateErrors.discount ? <small className="error-text">{updateErrors.discount}</small> : null}
-              </label>
-              <label className="field-wrap">
                 <span>TRẠNG THÁI</span>
                 <select
                   value={update.status}
@@ -367,6 +299,15 @@ export default function OrderPage() {
                     </option>
                   ))}
                 </select>
+              </label>
+              <label className="field-wrap">
+                <span>MÃ KHUYẾN MÃI</span>
+                <input
+                  value={update.promoCode}
+                  onChange={(e) => setUpdate((s) => ({ ...s, promoCode: e.target.value }))}
+                  placeholder="VD: P001"
+                />
+                {updateErrors.promoCode ? <small className="error-text">{updateErrors.promoCode}</small> : null}
               </label>
             </div>
             <div className="modal-actions">

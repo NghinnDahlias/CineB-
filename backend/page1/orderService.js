@@ -32,38 +32,28 @@ async function listOrders() {
 
 /**
  * INSERT — EXEC dbo.sp_ThemOrder
- * @param {{ maKhachHang: string, tongTien: number, soTienGiam: number }} p
+ * @param {{ maKhachHang: string}} p
  */
 async function insertOrder(p) {
   const pool = await poolPromise;
   const request = pool.request();
   request.input("MaKhachHang", sql.NVarChar(8), p.maKhachHang);
-  request.input("TongTien", sql.Decimal(18, 0), p.tongTien);
-  request.input("SoTienGiam", sql.Decimal(18, 0), p.soTienGiam);
   await request.execute("sp_ThemOrder");
 }
 
 /**
  * UPDATE — EXEC dbo.sp_CapNhatOrder
  * NULL = giữ nguyên (theo procedure)
- * @param {{ maDonHang: string, tongTien?: number|null, soTienGiam?: number|null, trangThai?: string|null }} p
+ * @param {{ maDonHang: string, trangThai?: string|null, maKhuyenMai?: string|null }} p
  */
 async function updateOrder(p) {
   const pool = await poolPromise;
   const request = pool.request();
   request.input("MaDonHang", sql.NVarChar(6), p.maDonHang);
-  request.input(
-    "TongTien",
-    sql.Decimal(18, 0),
-    p.tongTien === undefined || p.tongTien === null ? null : p.tongTien
-  );
-  request.input(
-    "SoTienGiam",
-    sql.Decimal(18, 0),
-    p.soTienGiam === undefined || p.soTienGiam === null ? null : p.soTienGiam
-  );
   const tt = nullIfEmptyString(p.trangThai);
   request.input("TrangThai", sql.NVarChar(15), tt);
+  const mkm = nullIfEmptyString(p.maKhuyenMai);
+  request.input("MaKhuyenMai", sql.NVarChar(4), mkm);
   await request.execute("sp_CapNhatOrder");
 }
 
