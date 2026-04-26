@@ -1,0 +1,1730 @@
+﻿USE [master]
+GO
+/*
+1. THAY ĐỔI KIỂU CÁC BẢNG CÓ NGÀY TẠO, NGÀY CẬP NHẬT TỪ date sang datetime (YYYY-MM-DD HH:mm:ss), ko ảnh hưởng dữ liệu nhập
+2. THAY ĐỔI TOÀN BỘ KIỂU nchar sang nvarchar vì có thể ko cần fill space cho đủ kích thước, tiện lợi cho việc nhập dữ liệu, cũng như viết procedure thêm, sửa.
+3. ĐÁNH COMMNENT CHỖ RÀNG BUỘC TỰ THAM CHIẾU VÌ CHO DỄ SỬA VÀ DỄ HIỂU, KO LÀM SAI VÀ KO LÀM LỖI.
+*/
+IF DB_ID(N'CineB') IS NULL CREATE DATABASE [CineB];
+/* SET UP NÀY KO CHẠY ĐC TRÊN WINDOW
+ CONTAINMENT = NONE
+ ON  PRIMARY 
+( NAME = N'CineB', FILENAME = N'/var/opt/mssql/data/CineB.mdf' , SIZE = 73728KB , MAXSIZE = UNLIMITED, FILEGROWTH = 65536KB )
+ LOG ON 
+( NAME = N'CineB_log', FILENAME = N'/var/opt/mssql/data/CineB_log.ldf' , SIZE = 73728KB , MAXSIZE = 2048GB , FILEGROWTH = 65536KB )
+ WITH CATALOG_COLLATION = DATABASE_DEFAULT, LEDGER = OFF
+ */
+GO
+ALTER DATABASE [CineB] SET COMPATIBILITY_LEVEL = 160
+GO
+IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
+begin
+EXEC [CineB].[dbo].[sp_fulltext_database] @action = 'enable'
+end
+GO
+ALTER DATABASE [CineB] SET ANSI_NULL_DEFAULT OFF 
+GO
+ALTER DATABASE [CineB] SET ANSI_NULLS OFF 
+GO
+ALTER DATABASE [CineB] SET ANSI_PADDING OFF 
+GO
+ALTER DATABASE [CineB] SET ANSI_WARNINGS OFF 
+GO
+ALTER DATABASE [CineB] SET ARITHABORT OFF 
+GO
+ALTER DATABASE [CineB] SET AUTO_CLOSE OFF 
+GO
+ALTER DATABASE [CineB] SET AUTO_SHRINK OFF 
+GO
+ALTER DATABASE [CineB] SET AUTO_UPDATE_STATISTICS ON 
+GO
+ALTER DATABASE [CineB] SET CURSOR_CLOSE_ON_COMMIT OFF 
+GO
+ALTER DATABASE [CineB] SET CURSOR_DEFAULT  GLOBAL 
+GO
+ALTER DATABASE [CineB] SET CONCAT_NULL_YIELDS_NULL OFF 
+GO
+ALTER DATABASE [CineB] SET NUMERIC_ROUNDABORT OFF 
+GO
+ALTER DATABASE [CineB] SET QUOTED_IDENTIFIER OFF 
+GO
+ALTER DATABASE [CineB] SET RECURSIVE_TRIGGERS OFF 
+GO
+--ALTER DATABASE [CineB] SET  DISABLE_BROKER 
+GO
+ALTER DATABASE [CineB] SET AUTO_UPDATE_STATISTICS_ASYNC OFF 
+GO
+--ALTER DATABASE [CineB] SET DATE_CORRELATION_OPTIMIZATION OFF 
+GO
+ALTER DATABASE [CineB] SET TRUSTWORTHY OFF 
+GO
+ALTER DATABASE [CineB] SET ALLOW_SNAPSHOT_ISOLATION OFF 
+GO
+ALTER DATABASE [CineB] SET PARAMETERIZATION SIMPLE 
+GO
+ALTER DATABASE [CineB] SET READ_COMMITTED_SNAPSHOT OFF 
+GO
+ALTER DATABASE [CineB] SET HONOR_BROKER_PRIORITY OFF 
+GO
+ALTER DATABASE [CineB] SET RECOVERY FULL 
+GO
+ALTER DATABASE [CineB] SET  MULTI_USER 
+GO
+ALTER DATABASE [CineB] SET PAGE_VERIFY CHECKSUM  
+GO
+ALTER DATABASE [CineB] SET DB_CHAINING OFF 
+GO
+--ALTER DATABASE [CineB] SET FILESTREAM( NON_TRANSACTED_ACCESS = OFF ) 
+GO
+ALTER DATABASE [CineB] SET TARGET_RECOVERY_TIME = 60 SECONDS 
+GO
+ALTER DATABASE [CineB] SET DELAYED_DURABILITY = DISABLED 
+GO
+--ALTER DATABASE [CineB] SET ACCELERATED_DATABASE_RECOVERY = OFF  
+GO
+EXEC sys.sp_db_vardecimal_storage_format N'CineB', N'ON'
+GO
+ALTER DATABASE [CineB] SET QUERY_STORE = ON
+GO
+ALTER DATABASE [CineB] SET QUERY_STORE (OPERATION_MODE = READ_WRITE, CLEANUP_POLICY = (STALE_QUERY_THRESHOLD_DAYS = 30), DATA_FLUSH_INTERVAL_SECONDS = 900, INTERVAL_LENGTH_MINUTES = 60, MAX_STORAGE_SIZE_MB = 1000, QUERY_CAPTURE_MODE = AUTO, SIZE_BASED_CLEANUP_MODE = AUTO, MAX_PLANS_PER_QUERY = 200, WAIT_STATS_CAPTURE_MODE = ON)
+GO
+
+USE [CineB]
+GO
+/* Chạy lại file: drop bảng dbo → tạo bảng + INSERT mẫu lại. Procedure (vd. 2_1.sql) giữ nguyên. */
+SET NOCOUNT ON;
+DECLARE @s NVARCHAR(MAX);
+SELECT @s = STRING_AGG(N'ALTER TABLE ' + QUOTENAME(SCHEMA_NAME(t.schema_id)) + N'.' + QUOTENAME(t.name) + N' DROP CONSTRAINT ' + QUOTENAME(fk.name) + N';', CHAR(10)) WITHIN GROUP (ORDER BY fk.name)
+FROM sys.foreign_keys AS fk INNER JOIN sys.tables AS t ON fk.parent_object_id = t.object_id;
+IF @s IS NOT NULL AND LEN(@s) > 0 EXEC sys.sp_executesql @s;
+SELECT @s = STRING_AGG(N'DROP TABLE ' + QUOTENAME(TABLE_SCHEMA) + N'.' + QUOTENAME(TABLE_NAME) + N';', CHAR(10)) WITHIN GROUP (ORDER BY TABLE_NAME)
+FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = N'dbo' AND TABLE_TYPE = N'BASE TABLE';
+IF @s IS NOT NULL AND LEN(@s) > 0 EXEC sys.sp_executesql @s;
+GO
+
+/****** Object:  Table [dbo].[ADMIN]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ADMIN](
+	[MÃ SỐ NHÂN VIÊN] [nvarchar](7) NOT NULL,
+	[MÃ SỐ NGƯỜI GIÁM SÁT] [nvarchar](7) NULL,
+ CONSTRAINT [PK_ADMIN] PRIMARY KEY CLUSTERED 
+(
+	[MÃ SỐ NHÂN VIÊN] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[BẰNG CẤP]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[BẰNG CẤP](
+	[MÃ SỐ NHÂN VIÊN] [nvarchar](7) NOT NULL,
+	[BẰNG CẤP] [nvarchar](30) NOT NULL,
+ CONSTRAINT [PK_BẰNG CẤP] PRIMARY KEY CLUSTERED 
+(
+	[MÃ SỐ NHÂN VIÊN] ASC,
+	[BẰNG CẤP] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[CINEMA]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[CINEMA](
+	[MÃ SỐ NHÂN VIÊN] [nvarchar](7) NOT NULL,
+	[MÃ SỐ RẠP] [nvarchar](6) NOT NULL,
+	[TÊN RẠP] [nvarchar](20) NOT NULL,
+	[SỐ NHÀ] [nvarchar](10) NOT NULL,
+	[PHƯỜNG/XÃ] [nvarchar](20) NOT NULL,
+	[TỈNH/THÀNH] [nvarchar](30) NOT NULL,
+	[TRẠNG THÁI] [nvarchar](10) NOT NULL,
+	[NGÀY BẮT ĐẦU QUẢN LÍ] [date] NOT NULL,
+ CONSTRAINT [PK_CINEMA] PRIMARY KEY CLUSTERED 
+(
+	[MÃ SỐ RẠP] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[CUSTOMER]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[CUSTOMER](
+	[MÃ SỐ KHÁCH HÀNG] [nvarchar](8) NOT NULL,
+	[HỌ VÀ TÊN ĐỆM] [nvarchar](20) NOT NULL,
+	[TÊN] [nvarchar](10) NOT NULL,
+	[NGÀY SINH] [date] NOT NULL,
+	[SỐ ĐIỆN THOẠI] [nvarchar](10) NOT NULL,
+	[EMAIL] [nvarchar](50) NOT NULL,
+	[GIỚI TÍNH] [nvarchar](3) NOT NULL,
+	[NGÀY TẠO TÀI KHOẢN] [datetime] NOT NULL,
+	[NGÀY CẬP NHẬT] [datetime] NOT NULL,
+	[PASSWORD] [nvarchar](20) NOT NULL,
+	[ĐIỂM TÍCH LŨY] [numeric](6, 0) NOT NULL,
+	[MÃ HẠNG THÀNH VIÊN] [nvarchar](5) NOT NULL,
+ CONSTRAINT [PK_CUSTOMER] PRIMARY KEY CLUSTERED 
+(
+	[MÃ SỐ KHÁCH HÀNG] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[DIỄN VIÊN]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[DIỄN VIÊN](
+	[MÃ PHIM] [nvarchar](6) NOT NULL,
+	[DIỄN VIÊN] [nvarchar](20) NOT NULL,
+ CONSTRAINT [PK_DIỄN VIÊN] PRIMARY KEY CLUSTERED 
+(
+	[MÃ PHIM] ASC,
+	[DIỄN VIÊN] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[EMPLOYEE]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[EMPLOYEE](
+	[MÃ SỐ NHÂN VIÊN] [nvarchar](7) NOT NULL,
+	[HỌ VÀ TÊN ĐỆM] [nvarchar](20) NOT NULL,
+	[TÊN] [nvarchar](10) NOT NULL,
+	[GIỚI TÍNH] [nvarchar](3) NOT NULL,
+	[CCCD] [nvarchar](12) NOT NULL,
+	[NGÀY SINH] [date] NOT NULL,
+	[SỐ ĐIỆN THOẠI] [nvarchar](10) NOT NULL,
+	[EMAIL] [nvarchar](50) NOT NULL,
+	[SỐ NHÀ] [nvarchar](10) NOT NULL,
+	[PHƯỜNG/XÃ] [nvarchar](20) NOT NULL,
+	[TỈNH/THÀNH] [nvarchar](30) NOT NULL,
+	[LOẠI NHÂN VIÊN] [nvarchar](25) NOT NULL,
+	[TRẠNG THÁI] [nvarchar](20) NOT NULL,
+	[USERNAME] [nvarchar](20) NOT NULL,
+	[PASSWORD] [nvarchar](20) NOT NULL,
+	[NGÀY CẬP NHẬT] [datetime] NOT NULL,
+	[LƯƠNG] [numeric](18, 0) NOT NULL,
+ CONSTRAINT [PK_EMPLOYEE] PRIMARY KEY CLUSTERED 
+(
+	[MÃ SỐ NHÂN VIÊN] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[FNB]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[FNB](
+	[MÃ SẢN PHẨM] [nvarchar](7) NOT NULL,
+	[TÊN SẢN PHẨM] [nvarchar](20) NOT NULL,
+	[MÔ TẢ] [nvarchar](50) NULL,
+	[KÍCH THƯỚC] [nvarchar](2) NOT NULL,
+	[GIÁ CẢ] [numeric](18, 0) NOT NULL,
+	[IMAGE_URL] [nvarchar](30) NOT NULL,
+	[NGÀY TẠO] [datetime] NOT NULL,
+	[NGÀY CẬP NHẬT] [datetime] NOT NULL,
+	[TRẠNG THÁI] [nvarchar](10) NOT NULL,
+ CONSTRAINT [PK_FNB] PRIMARY KEY CLUSTERED 
+(
+	[MÃ SẢN PHẨM] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[HƯỞNG]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[HƯỞNG](
+	[MÃ KHUYẾN MÃI] [nvarchar](4) NOT NULL,
+	[MÃ HẠNG THÀNH VIÊN] [nvarchar](5) NOT NULL,
+ CONSTRAINT [PK_HƯỞNG] PRIMARY KEY CLUSTERED 
+(
+	[MÃ KHUYẾN MÃI] ASC,
+	[MÃ HẠNG THÀNH VIÊN] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[LỒNG TIẾNG]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[LỒNG TIẾNG](
+	[MÃ PHIM] [nvarchar](6) NOT NULL,
+	[LỒNG TIẾNG] [nvarchar](10) NOT NULL,
+ CONSTRAINT [PK_LỒNG TIẾNG] PRIMARY KEY CLUSTERED 
+(
+	[MÃ PHIM] ASC,
+	[LỒNG TIẾNG] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[MEMBERSHIP_LEVEL]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[MEMBERSHIP_LEVEL](
+	[MÃ HẠNG THÀNH VIÊN] [nvarchar](5) NOT NULL,
+	[TÊN HẠNG] [nvarchar](10) NOT NULL,
+	[ĐIỂM TỐI THIỂU] [numeric](6, 0) NOT NULL,
+	[MÔ TẢ QUYỀN LỢI] [nvarchar](100) NULL,
+	[NGÀY CẬP NHẬT] [datetime] NOT NULL,
+ CONSTRAINT [PK_MEMBERSHIP_LEVEL] PRIMARY KEY CLUSTERED 
+(
+	[MÃ HẠNG THÀNH VIÊN] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[MOVIE]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[MOVIE](
+	[MÃ PHIM] [nvarchar](6) NOT NULL,
+	[TÊN PHIM] [nvarchar](30) NOT NULL,
+	[ĐẠO DIỄN] [nvarchar](20) NOT NULL,
+	[NĂM PHÁT HÀNH] [nvarchar](4) NOT NULL,
+	[NGÀY CẬP NHẬT] [datetime] NOT NULL,
+	[THỜI LƯỢNG] [time](7) NOT NULL,
+	[NGÔN NGỮ] [nvarchar](20) NOT NULL,
+	[GIỚI HẠN ĐỘ TUỔI] [nvarchar](3) NOT NULL,
+	[QUỐC GIA] [nvarchar](20) NOT NULL,
+	[MÔ TẢ] [nvarchar](100) NOT NULL,
+	[POSTER_URL] [nvarchar](20) NOT NULL,
+	[TRAILER_URL] [nvarchar](20) NOT NULL,
+ CONSTRAINT [PK_MOVIE] PRIMARY KEY CLUSTERED 
+(
+	[MÃ PHIM] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[ORDER]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ORDER](
+	[MÃ ĐƠN HÀNG] [nvarchar](6) NOT NULL,
+	[MÃ SỐ KHÁCH HÀNG] [nvarchar](8) NOT NULL,
+	[TỔNG TIỀN] [numeric](18, 0) NOT NULL,
+	[SỐ TIỀN GIẢM] [numeric](18, 0) NOT NULL,
+	[SỐ TIỀN CUỐI]  AS (case when (isnull([TỔNG TIỀN],(0))-isnull([SỐ TIỀN GIẢM],(0)))<(0) then (0) else isnull([TỔNG TIỀN],(0))-isnull([SỐ TIỀN GIẢM],(0)) end),
+	[NGÀY TẠO] [datetime] NOT NULL,
+	[TRẠNG THÁI] [nvarchar](15) NOT NULL,
+	[MÃ KHUYẾN MÃI] [nvarchar](4) NULL,
+ CONSTRAINT [PK_ORDER] PRIMARY KEY CLUSTERED 
+(
+	[MÃ ĐƠN HÀNG] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[ORDER_DETAIL]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ORDER_DETAIL](
+	[MÃ ORDER_DETAIL] [nvarchar](7) NOT NULL,
+	[MÃ ĐƠN HÀNG] [nvarchar](6) NOT NULL,
+	[SỐ LƯỢNG SẢN PHẨM] [numeric](3, 0) NOT NULL,
+	[MÃ SẢN PHẨM] [nvarchar](7) NOT NULL,
+ CONSTRAINT [PK_ORDER_DETAIL] PRIMARY KEY CLUSTERED 
+(
+	[MÃ ORDER_DETAIL] ASC,
+	[MÃ ĐƠN HÀNG] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[PHỤ ĐỀ]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[PHỤ ĐỀ](
+	[MÃ PHIM] [nvarchar](6) NOT NULL,
+	[PHỤ ĐỀ] [nvarchar](10) NOT NULL,
+ CONSTRAINT [PK_PHỤ ĐỀ] PRIMARY KEY CLUSTERED 
+(
+	[MÃ PHIM] ASC,
+	[PHỤ ĐỀ] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[PRICE]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[PRICE](
+	[LOẠI PHÒNG] [nvarchar](10) NOT NULL,
+	[LOẠI GHẾ] [nvarchar](10) NOT NULL,
+	[GIÁ VÉ] [numeric](18, 0) NULL,
+ CONSTRAINT [PK_PRICE] PRIMARY KEY CLUSTERED 
+(
+	[LOẠI PHÒNG] ASC,
+	[LOẠI GHẾ] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[PRODUCT]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[PRODUCT](
+	[MÃ SẢN PHẨM] [nvarchar](7) NOT NULL,
+ CONSTRAINT [PK_PRODUCT] PRIMARY KEY CLUSTERED 
+(
+	[MÃ SẢN PHẨM] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[PROMOTION]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[PROMOTION](
+	[MÃ KHUYẾN MÃI] [nvarchar](4) NOT NULL,
+	[TÊN KHUYẾN MÃI] [nvarchar](30) NOT NULL,
+	[LOẠI KHUYẾN MÃI] [nvarchar](10) NOT NULL,
+	[MÔ TẢ] [nvarchar](50) NULL,
+	[PHẦN TRĂM GIẢM] [decimal](5, 2) NULL,
+	[GIÁ TRỊ GIẢM TỐI ĐA] [numeric](6, 0) NOT NULL,
+	[NGÀY TẠO] [datetime] NOT NULL,
+	[NGÀY CẬP NHẬT] [datetime] NOT NULL,
+	[NGÀY BẮT ĐẦU] [date] NOT NULL,
+	[NGÀY KẾT THÚC] [date] NOT NULL,
+	[TRẠNG THÁI] [nvarchar](10) NOT NULL,
+	[PROMOTION_CODE] [nvarchar](20) NOT NULL,
+ CONSTRAINT [PK_PROMOTION] PRIMARY KEY CLUSTERED 
+(
+	[MÃ KHUYẾN MÃI] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[RATING]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[RATING](
+	[MÃ PHIM] [nvarchar](6) NOT NULL,
+	[MÃ SỐ KHÁCH HÀNG] [nvarchar](8) NOT NULL,
+	[ĐIỂM RATING] [numeric](1, 0) NOT NULL,
+	[NGÀY TẠO] [datetime] NOT NULL,
+	[NGÀY CẬP NHẬT] [datetime] NULL,
+ CONSTRAINT [PK_RATING] PRIMARY KEY CLUSTERED 
+(
+	[MÃ PHIM] ASC,
+	[MÃ SỐ KHÁCH HÀNG] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[ROOM]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ROOM](
+	[MÃ SỐ RẠP] [nvarchar](6) NOT NULL,
+	[MÃ PHÒNG] [nvarchar](3) NOT NULL,
+	[TÊN PHÒNG] [nvarchar](10) NOT NULL,
+	[MÔ TẢ] [nvarchar](50) NULL,
+	[THÔNG SỐ KỸ THUẬT] [nvarchar](50) NOT NULL,
+	[TRẠNG THÁI] [nvarchar](10) NOT NULL,
+	[LOẠI PHÒNG] [nvarchar](10) NULL,
+ CONSTRAINT [PK_ROOM] PRIMARY KEY CLUSTERED 
+(
+	[MÃ SỐ RẠP] ASC,
+	[MÃ PHÒNG] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[ROOM_TYPE]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ROOM_TYPE](
+	[LOẠI PHÒNG] [nvarchar](10) NOT NULL,
+ CONSTRAINT [PK_ROOM_TYPE] PRIMARY KEY CLUSTERED 
+(
+	[LOẠI PHÒNG] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[SEAT]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[SEAT](
+	[MÃ SỐ RẠP] [nvarchar](6) NOT NULL,
+	[MÃ PHÒNG] [nvarchar](3) NOT NULL,
+	[MÃ SỐ GHẾ] [nvarchar](3) NOT NULL,
+	[TÊN GHẾ] [nvarchar](10) NOT NULL,
+	[MÔ TẢ] [nvarchar](50) NULL,
+	[THÔNG SỐ KỸ THUẬT] [nvarchar](50) NOT NULL,
+	[LOẠI GHẾ] [nvarchar](10) NOT NULL,
+ CONSTRAINT [PK_SEAT] PRIMARY KEY CLUSTERED 
+(
+	[MÃ SỐ RẠP] ASC,
+	[MÃ PHÒNG] ASC,
+	[MÃ SỐ GHẾ] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[SEAT_SHOWTIME]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[SEAT_SHOWTIME](
+	[MÃ SỐ RẠP] [nvarchar](6) NOT NULL,
+	[MÃ PHÒNG] [nvarchar](3) NOT NULL,
+	[MÃ SỐ GHẾ] [nvarchar](3) NOT NULL,
+	[MÃ SỐ SUẤT CHIẾU] [nvarchar](7) NOT NULL,
+	[MÃ SEAT_SHOWTIME] [nvarchar](7) NOT NULL,
+	[TRẠNG THÁI GHẾ] [nvarchar](20) NOT NULL,
+ CONSTRAINT [PK_SEAT_SHOWTIME] PRIMARY KEY CLUSTERED 
+(
+	[MÃ SỐ RẠP] ASC,
+	[MÃ PHÒNG] ASC,
+	[MÃ SỐ GHẾ] ASC,
+	[MÃ SỐ SUẤT CHIẾU] ASC,
+	[MÃ SEAT_SHOWTIME] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[SEAT_TYPE]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[SEAT_TYPE](
+	[LOẠI GHẾ] [nvarchar](10) NOT NULL,
+ CONSTRAINT [PK_SEAT_TYPE] PRIMARY KEY CLUSTERED 
+(
+	[LOẠI GHẾ] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[SHOWTIME]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[SHOWTIME](
+	[MÃ SỐ SUẤT CHIẾU] [nvarchar](7) NOT NULL,
+	[NGÀY CHIẾU] [date] NOT NULL,
+	[GIỜ BẮT ĐẦU] [time](7) NOT NULL,
+	[GIỜ KẾT THÚC] [time](7) NOT NULL,
+	[NGÀY TẠO] [datetime] NOT NULL,
+	[NGÀY CẬP NHẬT] [datetime] NOT NULL,
+	[TRẠNG THÁI] [nvarchar](10) NOT NULL,
+	[MÃ PHÒNG] [nvarchar](3) NOT NULL,
+	[MÃ SỐ RẠP] [nvarchar](6) NOT NULL,
+	[MÃ PHIM] [nvarchar](6) NOT NULL,
+ CONSTRAINT [PK_SHOWTIME] PRIMARY KEY CLUSTERED 
+(
+	[MÃ SỐ SUẤT CHIẾU] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[STAFF]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[STAFF](
+	[MÃ SỐ NHÂN VIÊN] [nvarchar](7) NOT NULL,
+	[MÃ SỐ NGƯỜI GIÁM SÁT] [nvarchar](7) NULL,
+	[MÃ SỐ RẠP] [nvarchar](6) NOT NULL,
+ CONSTRAINT [PK_STAFF] PRIMARY KEY CLUSTERED 
+(
+	[MÃ SỐ NHÂN VIÊN] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[THỂ LOẠI]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[THỂ LOẠI](
+	[MÃ PHIM] [nvarchar](6) NOT NULL,
+	[THỂ LOẠI] [nvarchar](20) NOT NULL,
+ CONSTRAINT [PK_THỂ LOẠI] PRIMARY KEY CLUSTERED 
+(
+	[MÃ PHIM] ASC,
+	[THỂ LOẠI] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[TICKET_MOVIE]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[TICKET_MOVIE](
+	[MÃ SẢN PHẨM] [nvarchar](7) NOT NULL,
+	[MÃ SỐ RẠP] [nvarchar](6) NOT NULL,
+	[MÃ PHÒNG] [nvarchar](3) NOT NULL,
+	[MÃ SỐ GHẾ] [nvarchar](3) NOT NULL,
+	[MÃ SỐ SUẤT CHIẾU] [nvarchar](7) NOT NULL,
+	[MÃ SEAT_SHOWTIME] [nvarchar](7) NOT NULL,
+	[TRẠNG THÁI] [nvarchar](20) NOT NULL,
+ CONSTRAINT [PK_TICKET_MOVIE] PRIMARY KEY CLUSTERED 
+(
+	[MÃ SẢN PHẨM] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[TRANSACTION]    Script Date: 05/04/2026 10:56:12 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[TRANSACTION](
+	[MÃ THANH TOÁN] [nvarchar](7) NOT NULL,
+	[PHƯƠNG THỨC] [nvarchar](20) NOT NULL,
+	[SỐ TIỀN THỰC TẾ] [numeric](18, 0) NOT NULL,
+	[NGÀY TẠO] [datetime] NOT NULL,
+	[TRẠNG THÁI] [nvarchar](10) NOT NULL,
+	[MÃ ĐƠN HÀNG] [nvarchar](6) NOT NULL,
+ CONSTRAINT [PK_TRANSACTION] PRIMARY KEY CLUSTERED 
+(
+	[MÃ THANH TOÁN] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+INSERT [dbo].[ADMIN] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT]) VALUES (N'E000001', NULL)
+INSERT [dbo].[ADMIN] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT]) VALUES (N'E000003', N'E000001')
+INSERT [dbo].[ADMIN] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT]) VALUES (N'E000007', N'E000001')
+INSERT [dbo].[ADMIN] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT]) VALUES (N'E000011', N'E000003')
+INSERT [dbo].[ADMIN] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT]) VALUES (N'E000017', N'E000003')
+GO
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000001', N'Cử nhân CNTT')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000001', N'Thạc sĩ Quản trị kinh doanh')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000002', N'Cao đẳng CNTT')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000003', N'Cử nhân CNTT')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000004', N'Cao đẳng Kinh tế')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000005', N'Cử nhân Kế toán')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000006', N'Trung cấp')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000007', N'Cử nhân CNTT')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000008', N'Cao đẳng')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000009', N'Cử nhân Marketing')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000010', N'Cao đẳng')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000011', N'Thạc sĩ CNTT')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000012', N'Cao đẳng')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000013', N'Cử nhân CNTT')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000014', N'Cao đẳng')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000015', N'Cử nhân Quản trị')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000016', N'Trung cấp')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000017', N'Thạc sĩ Kinh tế')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000018', N'Cao đẳng')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000019', N'Cử nhân CNTT')
+INSERT [dbo].[BẰNG CẤP] ([MÃ SỐ NHÂN VIÊN], [BẰNG CẤP]) VALUES (N'E000020', N'Cao đẳng')
+GO
+INSERT [dbo].[CINEMA] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ RẠP], [TÊN RẠP], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [TRẠNG THÁI], [NGÀY BẮT ĐẦU QUẢN LÍ]) VALUES (N'E000002', N'RAP001', N'Rạp Galaxy Nguyễn Du', N'101', N'Bến Thành', N'Thành phố Hồ Chí Minh', N'HOẠT ĐỘNG', CAST(N'2026-01-10' AS Date))
+INSERT [dbo].[CINEMA] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ RẠP], [TÊN RẠP], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [TRẠNG THÁI], [NGÀY BẮT ĐẦU QUẢN LÍ]) VALUES (N'E000006', N'RAP002', N'Rạp CGV Vincom', N'202', N'Thảo Điền', N'Thành phố Hồ Chí Minh', N'HOẠT ĐỘNG', CAST(N'2026-02-15' AS Date))
+INSERT [dbo].[CINEMA] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ RẠP], [TÊN RẠP], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [TRẠNG THÁI], [NGÀY BẮT ĐẦU QUẢN LÍ]) VALUES (N'E000010', N'RAP003', N'Rạp Lotte Cinema', N'303', N'Phú Thọ', N'Thành phố Hồ Chí Minh', N'HOẠT ĐỘNG', CAST(N'2026-03-01' AS Date))
+INSERT [dbo].[CINEMA] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ RẠP], [TÊN RẠP], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [TRẠNG THÁI], [NGÀY BẮT ĐẦU QUẢN LÍ]) VALUES (N'E000014', N'RAP004', N'Rạp BHD Star', N'404', N'Phường 7', N'Thành phố Hồ Chí Minh', N'BẢO TRÌ', CAST(N'2026-03-20' AS Date))
+INSERT [dbo].[CINEMA] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ RẠP], [TÊN RẠP], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [TRẠNG THÁI], [NGÀY BẮT ĐẦU QUẢN LÍ]) VALUES (N'E000018', N'RAP005', N'Rạp Mega GS', N'505', N'Bình Trị Đông', N'Thành phố Hồ Chí Minh', N'ĐÓNG', CAST(N'2026-04-01' AS Date))
+GO
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000001', N'Nguyễn Văn', N'Nam', CAST(N'1999-05-14' AS Date), N'0909000011', N'nam.nguyen99@gmail.com', N'Nam', CAST(N'2025-01-10' AS Date), CAST(N'2026-03-20' AS Date), N'NamNguyen99', CAST(7600 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000002', N'Trần Thị', N'Mai', CAST(N'2001-08-22' AS Date), N'0909000012', N'mai.tran01@gmail.com', N'Nữ', CAST(N'2025-03-15' AS Date), CAST(N'2026-03-18' AS Date), N'MaiTran01A', CAST(5450 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000003', N'Lê Hoàng', N'Phúc', CAST(N'1998-11-30' AS Date), N'0909000013', N'phuc.le98@gmail.com', N'Nam', CAST(N'2024-12-05' AS Date), CAST(N'2026-02-25' AS Date), N'PhucLe98X', CAST(0 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000004', N'Phạm Ngọc', N'Lan', CAST(N'2000-07-09' AS Date), N'0909000014', N'lan.pham00@gmail.com', N'Nữ', CAST(N'2025-06-20' AS Date), CAST(N'2026-03-10' AS Date), N'LanPham00L', CAST(0 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000005', N'Võ Minh', N'Tuấn', CAST(N'1997-03-18' AS Date), N'0909000015', N'tuan.vo97@gmail.com', N'Nam', CAST(N'2024-11-11' AS Date), CAST(N'2026-01-30' AS Date), N'TuanVo97M', CAST(17900 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000006', N'Bùi Thanh', N'Hương', CAST(N'2002-01-25' AS Date), N'0909000016', N'huong.bui02@gmail.com', N'Nữ', CAST(N'2025-09-01' AS Date), CAST(N'2026-03-27' AS Date), N'HuongBui02Z', CAST(0 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000007', N'Đặng Quốc', N'Khánh', CAST(N'1996-12-12' AS Date), N'0909000017', N'khanh.dang96@gmail.com', N'Nam', CAST(N'2024-10-10' AS Date), CAST(N'2026-02-14' AS Date), N'KhanhDang96', CAST(16400 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000008', N'Phan Thùy', N'Linh', CAST(N'2003-04-03' AS Date), N'0909000018', N'linh.phan03@gmail.com', N'Nữ', CAST(N'2025-12-12' AS Date), CAST(N'2026-03-28' AS Date), N'LinhPhan03', CAST(0 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000009', N'Vũ Anh', N'Khoa', CAST(N'1995-09-27' AS Date), N'0909000019', N'khoa.vu95@gmail.com', N'Nam', CAST(N'2024-08-08' AS Date), CAST(N'2026-01-05' AS Date), N'KhoaVu95A', CAST(9500 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000010', N'Hoàng Bích', N'Ngọc', CAST(N'2001-02-14' AS Date), N'0909000020', N'ngoc.hoang01@gmail.com', N'Nữ', CAST(N'2025-02-02' AS Date), CAST(N'2026-03-22' AS Date), N'NgocHoang01', CAST(0 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000011', N'Ngô Đức', N'Anh', CAST(N'2008-06-15' AS Date), N'0909000021', N'anh.ngo08@gmail.com', N'Nam', CAST(N'2025-07-01' AS Date), CAST(N'2026-03-15' AS Date), N'AnhNgo08', CAST(14500 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000012', N'Đỗ Thị', N'Trang', CAST(N'2007-09-10' AS Date), N'0909000022', N'thutrang.do07@gmail.com', N'Nữ', CAST(N'2025-08-05' AS Date), CAST(N'2026-03-18' AS Date), N'TrangDo07', CAST(0 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000013', N'Trịnh Minh', N'Quân', CAST(N'2006-12-01' AS Date), N'0909000023', N'quan.trinh06@gmail.com', N'Nam', CAST(N'2025-09-20' AS Date), CAST(N'2026-03-25' AS Date), N'QuanTrinh06', CAST(0 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000014', N'Phùng Gia', N'Hân', CAST(N'2009-03-22' AS Date), N'0909000024', N'han.phung09@gmail.com', N'Nữ', CAST(N'2025-10-10' AS Date), CAST(N'2026-03-27' AS Date), N'HanPhung09', CAST(0 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000015', N'Lý Quốc', N'Bảo', CAST(N'2005-07-30' AS Date), N'0909000025', N'bao.ly05@gmail.com', N'Nam', CAST(N'2025-06-15' AS Date), CAST(N'2026-02-20' AS Date), N'BaoLy005', CAST(0 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000016', N'Huỳnh Thanh', N'Tâm', CAST(N'2004-11-11' AS Date), N'0909000026', N'tam.huynh04@gmail.com', N'Nữ', CAST(N'2025-05-25' AS Date), CAST(N'2026-03-01' AS Date), N'TamHuynh04', CAST(0 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000017', N'Mai Hoàng', N'Long', CAST(N'2003-02-18' AS Date), N'0909000027', N'long.mai03@gmail.com', N'Nam', CAST(N'2025-04-12' AS Date), CAST(N'2026-03-12' AS Date), N'LongMai03', CAST(0 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000018', N'Đinh Thị', N'Yến', CAST(N'2008-08-08' AS Date), N'0909000028', N'yen.dinh08@gmail.com', N'Nữ', CAST(N'2025-11-01' AS Date), CAST(N'2026-03-29' AS Date), N'YenDinh08', CAST(0 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000019', N'Cao Văn', N'Hải', CAST(N'2002-10-05' AS Date), N'0909000029', N'hai.cao02@gmail.com', N'Nam', CAST(N'2025-03-30' AS Date), CAST(N'2026-03-21' AS Date), N'HaiCao02', CAST(0 AS Numeric(6, 0)), N'ML1')
+INSERT [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG], [HỌ VÀ TÊN ĐỆM], [TÊN], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [GIỚI TÍNH], [NGÀY TẠO TÀI KHOẢN], [NGÀY CẬP NHẬT], [PASSWORD], [ĐIỂM TÍCH LŨY], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'C0000020', N'Trương Mỹ', N'Lệ', CAST(N'2006-05-19' AS Date), N'0909000030', N'le.truong06@gmail.com', N'Nữ', CAST(N'2025-07-18' AS Date), CAST(N'2026-03-26' AS Date), N'LeTruong06', CAST(0 AS Numeric(6, 0)), N'ML1')
+GO
+INSERT [dbo].[DIỄN VIÊN] ([MÃ PHIM], [DIỄN VIÊN]) VALUES (N'MV0001', N'Chris Evans')
+INSERT [dbo].[DIỄN VIÊN] ([MÃ PHIM], [DIỄN VIÊN]) VALUES (N'MV0001', N'Robert Downey Jr.')
+INSERT [dbo].[DIỄN VIÊN] ([MÃ PHIM], [DIỄN VIÊN]) VALUES (N'MV0002', N'Wasabi Mizuta')
+INSERT [dbo].[DIỄN VIÊN] ([MÃ PHIM], [DIỄN VIÊN]) VALUES (N'MV0003', N'Patrick Wilson')
+INSERT [dbo].[DIỄN VIÊN] ([MÃ PHIM], [DIỄN VIÊN]) VALUES (N'MV0003', N'Vera Farmiga')
+INSERT [dbo].[DIỄN VIÊN] ([MÃ PHIM], [DIỄN VIÊN]) VALUES (N'MV0004', N'Idina Menzel')
+INSERT [dbo].[DIỄN VIÊN] ([MÃ PHIM], [DIỄN VIÊN]) VALUES (N'MV0005', N'Song Kang-ho')
+INSERT [dbo].[DIỄN VIÊN] ([MÃ PHIM], [DIỄN VIÊN]) VALUES (N'MV0006', N'Keanu Reeves')
+INSERT [dbo].[DIỄN VIÊN] ([MÃ PHIM], [DIỄN VIÊN]) VALUES (N'MV0007', N'Ryunosuke Kamiki')
+INSERT [dbo].[DIỄN VIÊN] ([MÃ PHIM], [DIỄN VIÊN]) VALUES (N'MV0008', N'Tom Holland')
+INSERT [dbo].[DIỄN VIÊN] ([MÃ PHIM], [DIỄN VIÊN]) VALUES (N'MV0009', N'Gong Yoo')
+INSERT [dbo].[DIỄN VIÊN] ([MÃ PHIM], [DIỄN VIÊN]) VALUES (N'MV0010', N'Sandra Bullock')
+GO
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000001', N'Nguyễn Văn', N'An', N'Nam', N'074000000001', CAST(N'1998-04-12' AS Date), N'0909000001', N'EmE000001@gmail.com', N'12', N'Quận 1', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN CHÍNH THỨC', N'ĐANG LÀM', N'an.nguyen', N'AnNguyen98', CAST(N'2026-03-20' AS Date), CAST(12000000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000002', N'Lê Hoàng', N'Minh', N'Nam', N'074000000002', CAST(N'2000-09-25' AS Date), N'0909000002', N'EmE000002@gmail.com', N'45', N'Quận 2', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN THỜI VỤ', N'ĐANG LÀM', N'minh.le', N'MinhLe00A', CAST(N'2026-03-18' AS Date), CAST(7000000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000003', N'Hoàng Gia', N'Huy', N'Nam', N'074000000003', CAST(N'1997-01-08' AS Date), N'0909000003', N'EmE000003@gmail.com', N'78', N'Quận 3', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN CHÍNH THỨC', N'ĐÃ NGHỈ', N'huy.hoang', N'HuyHoang97', CAST(N'2026-02-10' AS Date), CAST(15000000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000004', N'Phạm Quỳnh', N'Anh', N'Nữ', N'074000000004', CAST(N'1999-06-30' AS Date), N'0909000004', N'EmE000004@gmail.com', N'23', N'Quận 4', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN THỜI VỤ', N'ĐANG LÀM', N'anh.pham', N'AnhPham99X', CAST(N'2026-03-25' AS Date), CAST(4000000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000005', N'Võ Ngọc', N'Trâm', N'Nữ', N'074000000005', CAST(N'2001-11-15' AS Date), N'0909000005', N'EmE000005@gmail.com', N'56', N'Quận 5', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN CHÍNH THỨC', N'ĐANG LÀM', N'tram.vo', N'TramVo01L', CAST(N'2026-03-22' AS Date), CAST(13000000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000006', N'Bùi Thanh', N'Tâm', N'Nữ', N'074000000006', CAST(N'1996-03-05' AS Date), N'0909000006', N'EmE000006@gmail.com', N'89', N'Quận 6', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN THỜI VỤ', N'ĐANG LÀM', N'tam.bui', N'TamBui96Z', CAST(N'2026-01-15' AS Date), CAST(6000000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000007', N'Đặng Quốc', N'Bảo', N'Nam', N'074000000007', CAST(N'1995-07-19' AS Date), N'0909000007', N'EmE000007@gmail.com', N'101', N'Quận 7', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN CHÍNH THỨC', N'LÀM VIỆC LẠI', N'bao.dang', N'BaoDang95Q', CAST(N'2026-03-10' AS Date), CAST(14000000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000008', N'Phan Minh', N'Khang', N'Nam', N'074000000008', CAST(N'2002-02-28' AS Date), N'0909000008', N'EmE000008@gmail.com', N'67', N'Quận 8', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN THỜI VỤ', N'ĐANG LÀM', N'khang.phan', N'KhangPhan02', CAST(N'2026-03-27' AS Date), CAST(3500000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000009', N'Vũ Thùy', N'Linh', N'Nữ', N'074000000009', CAST(N'1998-12-09' AS Date), N'0909000009', N'EmE000009@gmail.com', N'34', N'Quận 9', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN CHÍNH THỨC', N'ĐANG LÀM', N'linh.vu', N'LinhVu98A', CAST(N'2026-03-21' AS Date), CAST(12500000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000010', N'Trần Thị Bích', N'Ngọc', N'Nữ', N'074000000010', CAST(N'2000-05-17' AS Date), N'0909000010', N'EmE000010@gmail.com', N'90', N'Quận 10', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN THỜI VỤ', N'ĐÃ NGHỈ', N'ngoc.tran', N'NgocTran00', CAST(N'2026-02-28' AS Date), CAST(6500000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000011', N'Nguyễn Thị', N'Mai', N'Nữ', N'074000000011', CAST(N'1999-08-12' AS Date), N'0909000011', N'EmE000011@gmail.com', N'11', N'Quận 11', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN CHÍNH THỨC', N'ĐANG LÀM', N'mai.nguyen', N'MaiNguyen99', CAST(N'2026-03-15' AS Date), CAST(11000000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000012', N'Lê Thị', N'Hà', N'Nữ', N'074000000012', CAST(N'2001-02-20' AS Date), N'0909000012', N'EmE000012@gmail.com', N'22', N'Quận 12', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN THỜI VỤ', N'ĐANG LÀM', N'ha.le', N'HaLe0001', CAST(N'2026-03-18' AS Date), CAST(5000000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000013', N'Trần Ngọc', N'Ánh', N'Nữ', N'074000000013', CAST(N'1997-11-05' AS Date), N'0909000013', N'EmE000013@gmail.com', N'33', N'Bình Thạnh', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN CHÍNH THỨC', N'ĐANG LÀM', N'anh.tran', N'AnhTran97', CAST(N'2026-03-10' AS Date), CAST(12000000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000014', N'Phạm Thị', N'Lan', N'Nữ', N'074000000014', CAST(N'2000-07-25' AS Date), N'0909000014', N'EmE000014@gmail.com', N'44', N'Gò Vấp', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN THỜI VỤ', N'ĐANG LÀM', N'lan.pham', N'LanPham00', CAST(N'2026-03-22' AS Date), CAST(6000000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000015', N'Võ Thị', N'Yến', N'Nữ', N'074000000015', CAST(N'1998-03-14' AS Date), N'0909000015', N'EmE000015@gmail.com', N'55', N'Tân Bình', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN CHÍNH THỨC', N'LÀM VIỆC LẠI', N'yen.vo', N'YenVo098', CAST(N'2026-03-12' AS Date), CAST(11500000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000016', N'Bùi Ngọc', N'Hân', N'Nữ', N'074000000016', CAST(N'2002-09-09' AS Date), N'0909000016', N'EmE000016@gmail.com', N'66', N'Phú Nhuận', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN THỜI VỤ', N'ĐANG LÀM', N'han.bui', N'HanBui02', CAST(N'2026-03-28' AS Date), CAST(4500000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000017', N'Đặng Thị', N'Thảo', N'Nữ', N'074000000017', CAST(N'1996-01-30' AS Date), N'0909000017', N'EmE000017@gmail.com', N'77', N'Thủ Đức', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN CHÍNH THỨC', N'ĐANG LÀM', N'thao.dang', N'ThaoDang96', CAST(N'2026-03-05' AS Date), CAST(13000000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000018', N'Phan Thị', N'Tuyết', N'Nữ', N'074000000018', CAST(N'1999-12-01' AS Date), N'0909000018', N'EmE000018@gmail.com', N'88', N'Bình Tân', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN THỜI VỤ', N'LÀM VIỆC LẠI', N'tuyet.phan', N'TuyetPhan99', CAST(N'2026-03-26' AS Date), CAST(5500000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000019', N'Vũ Ngọc', N'Diệp', N'Nữ', N'074000000019', CAST(N'2001-06-18' AS Date), N'0909000019', N'EmE000019@gmail.com', N'99', N'Hóc Môn', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN CHÍNH THỨC', N'ĐANG LÀM', N'diep.vu', N'DiepVu01', CAST(N'2026-03-20' AS Date), CAST(12500000 AS Numeric(18, 0)))
+INSERT [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN], [HỌ VÀ TÊN ĐỆM], [TÊN], [GIỚI TÍNH], [CCCD], [NGÀY SINH], [SỐ ĐIỆN THOẠI], [EMAIL], [SỐ NHÀ], [PHƯỜNG/XÃ], [TỈNH/THÀNH], [LOẠI NHÂN VIÊN], [TRẠNG THÁI], [USERNAME], [PASSWORD], [NGÀY CẬP NHẬT], [LƯƠNG]) VALUES (N'E000020', N'Hoàng Thị', N'Nhung', N'Nữ', N'074000000020', CAST(N'1997-10-22' AS Date), N'0909000020', N'EmE000020@gmail.com', N'100', N'Nhà Bè', N'Thành phố Hồ Chí Minh', N'NHÂN VIÊN THỜI VỤ', N'ĐANG LÀM', N'nhung.hoang', N'NhungHoang97', CAST(N'2026-03-17' AS Date), CAST(6500000 AS Numeric(18, 0)))
+GO
+INSERT [dbo].[FNB] ([MÃ SẢN PHẨM], [TÊN SẢN PHẨM], [MÔ TẢ], [KÍCH THƯỚC], [GIÁ CẢ], [IMAGE_URL], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI]) VALUES (N'F001', N'Bắp rang bơ', N'Bắp rang truyền thống', N'S', CAST(30000 AS Numeric(18, 0)), N'baprang_s.jpg', CAST(N'2026-03-01' AS Date), CAST(N'2026-03-05' AS Date), N'ĐANG BÁN')
+INSERT [dbo].[FNB] ([MÃ SẢN PHẨM], [TÊN SẢN PHẨM], [MÔ TẢ], [KÍCH THƯỚC], [GIÁ CẢ], [IMAGE_URL], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI]) VALUES (N'F002', N'Bắp rang phô mai', N'Bắp rang vị phô mai', N'M', CAST(45000 AS Numeric(18, 0)), N'baprang_m.jpg', CAST(N'2026-03-02' AS Date), CAST(N'2026-03-06' AS Date), N'ĐANG BÁN')
+INSERT [dbo].[FNB] ([MÃ SẢN PHẨM], [TÊN SẢN PHẨM], [MÔ TẢ], [KÍCH THƯỚC], [GIÁ CẢ], [IMAGE_URL], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI]) VALUES (N'F003', N'Bắp caramel', N'Bắp rang vị caramel', N'L', CAST(50000 AS Numeric(18, 0)), N'baprang_l.jpg', CAST(N'2026-03-03' AS Date), CAST(N'2026-03-07' AS Date), N'ĐANG BÁN')
+INSERT [dbo].[FNB] ([MÃ SẢN PHẨM], [TÊN SẢN PHẨM], [MÔ TẢ], [KÍCH THƯỚC], [GIÁ CẢ], [IMAGE_URL], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI]) VALUES (N'F004', N'Nước Coca', N'Nước ngọt có ga', N'S', CAST(25000 AS Numeric(18, 0)), N'coca_s.jpg', CAST(N'2026-03-04' AS Date), CAST(N'2026-03-08' AS Date), N'ĐANG BÁN')
+INSERT [dbo].[FNB] ([MÃ SẢN PHẨM], [TÊN SẢN PHẨM], [MÔ TẢ], [KÍCH THƯỚC], [GIÁ CẢ], [IMAGE_URL], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI]) VALUES (N'F005', N'Nước Pepsi', N'Nước ngọt có ga', N'M', CAST(30000 AS Numeric(18, 0)), N'pepsi_m.jpg', CAST(N'2026-03-05' AS Date), CAST(N'2026-03-09' AS Date), N'ĐANG BÁN')
+INSERT [dbo].[FNB] ([MÃ SẢN PHẨM], [TÊN SẢN PHẨM], [MÔ TẢ], [KÍCH THƯỚC], [GIÁ CẢ], [IMAGE_URL], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI]) VALUES (N'F006', N'Trà đào', N'Trà đào mát lạnh', N'M', CAST(35000 AS Numeric(18, 0)), N'tradao.jpg', CAST(N'2026-03-06' AS Date), CAST(N'2026-03-10' AS Date), N'ĐANG BÁN')
+INSERT [dbo].[FNB] ([MÃ SẢN PHẨM], [TÊN SẢN PHẨM], [MÔ TẢ], [KÍCH THƯỚC], [GIÁ CẢ], [IMAGE_URL], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI]) VALUES (N'F007', N'Nước suối', N'Nước tinh khiết', N'S', CAST(15000 AS Numeric(18, 0)), N'nuocsuoi.jpg', CAST(N'2026-03-07' AS Date), CAST(N'2026-03-11' AS Date), N'NGỪNG BÁN')
+INSERT [dbo].[FNB] ([MÃ SẢN PHẨM], [TÊN SẢN PHẨM], [MÔ TẢ], [KÍCH THƯỚC], [GIÁ CẢ], [IMAGE_URL], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI]) VALUES (N'F008', N'Combo bắp + nước', N'Combo tiết kiệm', N'L', CAST(70000 AS Numeric(18, 0)), N'combo1.jpg', CAST(N'2026-03-10' AS Date), CAST(N'2026-03-15' AS Date), N'ĐANG BÁN')
+INSERT [dbo].[FNB] ([MÃ SẢN PHẨM], [TÊN SẢN PHẨM], [MÔ TẢ], [KÍCH THƯỚC], [GIÁ CẢ], [IMAGE_URL], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI]) VALUES (N'F009', N'Combo đôi', N'Combo cho 2 người', N'L', CAST(120000 AS Numeric(18, 0)), N'combo2.jpg', CAST(N'2026-03-12' AS Date), CAST(N'2026-03-18' AS Date), N'ĐANG BÁN')
+INSERT [dbo].[FNB] ([MÃ SẢN PHẨM], [TÊN SẢN PHẨM], [MÔ TẢ], [KÍCH THƯỚC], [GIÁ CẢ], [IMAGE_URL], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI]) VALUES (N'F010', N'Hotdog', N'Xúc xích bánh mì', N'M', CAST(40000 AS Numeric(18, 0)), N'hotdog.jpg', CAST(N'2026-03-15' AS Date), CAST(N'2026-03-20' AS Date), N'NGỪNG BÁN')
+GO
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P001', N'ML1')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P001', N'ML2')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P001', N'ML3')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P002', N'ML2')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P002', N'ML3')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P003', N'ML2')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P003', N'ML3')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P004', N'ML3')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P005', N'ML3')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P006', N'ML3')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P007', N'ML1')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P007', N'ML2')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P007', N'ML3')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P008', N'ML1')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P008', N'ML2')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P008', N'ML3')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P010', N'ML1')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P010', N'ML2')
+INSERT [dbo].[HƯỞNG] ([MÃ KHUYẾN MÃI], [MÃ HẠNG THÀNH VIÊN]) VALUES (N'P010', N'ML3')
+GO
+INSERT [dbo].[LỒNG TIẾNG] ([MÃ PHIM], [LỒNG TIẾNG]) VALUES (N'MV0001', N'Tiếng Việt')
+INSERT [dbo].[LỒNG TIẾNG] ([MÃ PHIM], [LỒNG TIẾNG]) VALUES (N'MV0002', N'Tiếng Việt')
+INSERT [dbo].[LỒNG TIẾNG] ([MÃ PHIM], [LỒNG TIẾNG]) VALUES (N'MV0004', N'Tiếng Việt')
+INSERT [dbo].[LỒNG TIẾNG] ([MÃ PHIM], [LỒNG TIẾNG]) VALUES (N'MV0007', N'Tiếng Việt')
+INSERT [dbo].[LỒNG TIẾNG] ([MÃ PHIM], [LỒNG TIẾNG]) VALUES (N'MV0010', N'Tiếng Việt')
+GO
+INSERT [dbo].[MEMBERSHIP_LEVEL] ([MÃ HẠNG THÀNH VIÊN], [TÊN HẠNG], [ĐIỂM TỐI THIỂU], [MÔ TẢ QUYỀN LỢI], [NGÀY CẬP NHẬT]) VALUES (N'ML1', N'MEMBER', CAST(0 AS Numeric(6, 0)), N'Hạng mặc định cho khách hàng mới hoặc không đủ điểm. Không có ưu đãi.', CAST(N'2026-01-11' AS Date))
+INSERT [dbo].[MEMBERSHIP_LEVEL] ([MÃ HẠNG THÀNH VIÊN], [TÊN HẠNG], [ĐIỂM TỐI THIỂU], [MÔ TẢ QUYỀN LỢI], [NGÀY CẬP NHẬT]) VALUES (N'ML2', N'VIP', CAST(20000 AS Numeric(6, 0)), N'Nhận 2 mã giảm giá 20% tối đa 100k, thời hạn 2 tháng kể từ khi đạt hạng.', CAST(N'2026-01-11' AS Date))
+INSERT [dbo].[MEMBERSHIP_LEVEL] ([MÃ HẠNG THÀNH VIÊN], [TÊN HẠNG], [ĐIỂM TỐI THIỂU], [MÔ TẢ QUYỀN LỢI], [NGÀY CẬP NHẬT]) VALUES (N'ML3', N'VVIP', CAST(50000 AS Numeric(6, 0)), N'Nhận ưu đãi VIP + 3 mã giảm 30% tối đa 200k, thời hạn 3 tháng.', CAST(N'2026-01-11' AS Date))
+GO
+INSERT [dbo].[MOVIE] ([MÃ PHIM], [TÊN PHIM], [ĐẠO DIỄN], [NĂM PHÁT HÀNH], [NGÀY CẬP NHẬT], [THỜI LƯỢNG], [NGÔN NGỮ], [GIỚI HẠN ĐỘ TUỔI], [QUỐC GIA], [MÔ TẢ], [POSTER_URL], [TRAILER_URL]) VALUES (N'MV0001', N'Avengers: Endgame', N'Anthony Russo', N'2019', CAST(N'2026-03-20' AS Date), CAST(N'03:01:00' AS Time), N'Tiếng Anh', N'T13', N'Mỹ', N'Siêu anh hùng cứu thế giới', N'poster1.jpg', N'trailer1.mp4')
+INSERT [dbo].[MOVIE] ([MÃ PHIM], [TÊN PHIM], [ĐẠO DIỄN], [NĂM PHÁT HÀNH], [NGÀY CẬP NHẬT], [THỜI LƯỢNG], [NGÔN NGỮ], [GIỚI HẠN ĐỘ TUỔI], [QUỐC GIA], [MÔ TẢ], [POSTER_URL], [TRAILER_URL]) VALUES (N'MV0002', N'Doraemon Movie', N'Takashi Yamazaki', N'2020', CAST(N'2026-03-18' AS Date), CAST(N'01:50:00' AS Time), N'Tiếng Nhật', N'P', N'Nhật Bản', N'Phiêu lưu cùng Doraemon', N'poster2.jpg', N'trailer2.mp4')
+INSERT [dbo].[MOVIE] ([MÃ PHIM], [TÊN PHIM], [ĐẠO DIỄN], [NĂM PHÁT HÀNH], [NGÀY CẬP NHẬT], [THỜI LƯỢNG], [NGÔN NGỮ], [GIỚI HẠN ĐỘ TUỔI], [QUỐC GIA], [MÔ TẢ], [POSTER_URL], [TRAILER_URL]) VALUES (N'MV0003', N'The Conjuring', N'James Wan', N'2013', CAST(N'2026-02-25' AS Date), CAST(N'01:52:00' AS Time), N'Tiếng Anh', N'T18', N'Mỹ', N'Phim kinh dị nổi tiếng', N'poster3.jpg', N'trailer3.mp4')
+INSERT [dbo].[MOVIE] ([MÃ PHIM], [TÊN PHIM], [ĐẠO DIỄN], [NĂM PHÁT HÀNH], [NGÀY CẬP NHẬT], [THỜI LƯỢNG], [NGÔN NGỮ], [GIỚI HẠN ĐỘ TUỔI], [QUỐC GIA], [MÔ TẢ], [POSTER_URL], [TRAILER_URL]) VALUES (N'MV0004', N'Frozen II', N'Chris Buck', N'2019', CAST(N'2026-03-10' AS Date), CAST(N'01:43:00' AS Time), N'Tiếng Anh', N'K', N'Mỹ', N'Phim hoạt hình Disney', N'poster4.jpg', N'trailer4.mp4')
+INSERT [dbo].[MOVIE] ([MÃ PHIM], [TÊN PHIM], [ĐẠO DIỄN], [NĂM PHÁT HÀNH], [NGÀY CẬP NHẬT], [THỜI LƯỢNG], [NGÔN NGỮ], [GIỚI HẠN ĐỘ TUỔI], [QUỐC GIA], [MÔ TẢ], [POSTER_URL], [TRAILER_URL]) VALUES (N'MV0005', N'Parasite', N'Bong Joon-ho', N'2019', CAST(N'2026-01-30' AS Date), CAST(N'02:12:00' AS Time), N'Tiếng Hàn', N'T16', N'Hàn Quốc', N'Phim đoạt Oscar', N'poster5.jpg', N'trailer5.mp4')
+INSERT [dbo].[MOVIE] ([MÃ PHIM], [TÊN PHIM], [ĐẠO DIỄN], [NĂM PHÁT HÀNH], [NGÀY CẬP NHẬT], [THỜI LƯỢNG], [NGÔN NGỮ], [GIỚI HẠN ĐỘ TUỔI], [QUỐC GIA], [MÔ TẢ], [POSTER_URL], [TRAILER_URL]) VALUES (N'MV0006', N'John Wick 4', N'Chad Stahelski', N'2023', CAST(N'2026-03-27' AS Date), CAST(N'02:49:00' AS Time), N'Tiếng Anh', N'T18', N'Mỹ', N'Sát thủ huyền thoại', N'poster6.jpg', N'trailer6.mp4')
+INSERT [dbo].[MOVIE] ([MÃ PHIM], [TÊN PHIM], [ĐẠO DIỄN], [NĂM PHÁT HÀNH], [NGÀY CẬP NHẬT], [THỜI LƯỢNG], [NGÔN NGỮ], [GIỚI HẠN ĐỘ TUỔI], [QUỐC GIA], [MÔ TẢ], [POSTER_URL], [TRAILER_URL]) VALUES (N'MV0007', N'Your Name', N'Makoto Shinkai', N'2016', CAST(N'2026-02-14' AS Date), CAST(N'01:46:00' AS Time), N'Tiếng Nhật', N'T13', N'Nhật Bản', N'Anime lãng mạn', N'poster7.jpg', N'trailer7.mp4')
+INSERT [dbo].[MOVIE] ([MÃ PHIM], [TÊN PHIM], [ĐẠO DIỄN], [NĂM PHÁT HÀNH], [NGÀY CẬP NHẬT], [THỜI LƯỢNG], [NGÔN NGỮ], [GIỚI HẠN ĐỘ TUỔI], [QUỐC GIA], [MÔ TẢ], [POSTER_URL], [TRAILER_URL]) VALUES (N'MV0008', N'Spider-Man: No Way Home', N'Jon Watts', N'2021', CAST(N'2026-03-28' AS Date), CAST(N'02:28:00' AS Time), N'Tiếng Anh', N'T13', N'Mỹ', N'Đa vũ trụ Spider-Man', N'poster8.jpg', N'trailer8.mp4')
+INSERT [dbo].[MOVIE] ([MÃ PHIM], [TÊN PHIM], [ĐẠO DIỄN], [NĂM PHÁT HÀNH], [NGÀY CẬP NHẬT], [THỜI LƯỢNG], [NGÔN NGỮ], [GIỚI HẠN ĐỘ TUỔI], [QUỐC GIA], [MÔ TẢ], [POSTER_URL], [TRAILER_URL]) VALUES (N'MV0009', N'Train to Busan', N'Yeon Sang-ho', N'2016', CAST(N'2026-01-05' AS Date), CAST(N'01:58:00' AS Time), N'Tiếng Hàn', N'T16', N'Hàn Quốc', N'Zombie trên tàu', N'poster9.jpg', N'trailer9.mp4')
+INSERT [dbo].[MOVIE] ([MÃ PHIM], [TÊN PHIM], [ĐẠO DIỄN], [NĂM PHÁT HÀNH], [NGÀY CẬP NHẬT], [THỜI LƯỢNG], [NGÔN NGỮ], [GIỚI HẠN ĐỘ TUỔI], [QUỐC GIA], [MÔ TẢ], [POSTER_URL], [TRAILER_URL]) VALUES (N'MV0010', N'Minions', N'Kyle Balda', N'2015', CAST(N'2026-03-22' AS Date), CAST(N'01:31:00' AS Time), N'Tiếng Anh', N'P', N'Mỹ', N'Hoạt hình vui nhộn', N'poster10.jpg', N'trailer10.mp4')
+GO
+INSERT [dbo].[ORDER] ([MÃ ĐƠN HÀNG], [MÃ SỐ KHÁCH HÀNG], [TỔNG TIỀN], [SỐ TIỀN GIẢM], [NGÀY TẠO], [TRẠNG THÁI], [MÃ KHUYẾN MÃI]) VALUES (N'O00001', N'C0000001', CAST(860000 AS Numeric(18, 0)), CAST(100000 AS Numeric(18, 0)), CAST(N'2026-03-01' AS Date), N'ĐÃ THANH TOÁN', N'P001')
+INSERT [dbo].[ORDER] ([MÃ ĐƠN HÀNG], [MÃ SỐ KHÁCH HÀNG], [TỔNG TIỀN], [SỐ TIỀN GIẢM], [NGÀY TẠO], [TRẠNG THÁI], [MÃ KHUYẾN MÃI]) VALUES (N'O00002', N'C0000002', CAST(595000 AS Numeric(18, 0)), CAST(50000 AS Numeric(18, 0)), CAST(N'2026-03-02' AS Date), N'ĐÃ THANH TOÁN', N'P010')
+INSERT [dbo].[ORDER] ([MÃ ĐƠN HÀNG], [MÃ SỐ KHÁCH HÀNG], [TỔNG TIỀN], [SỐ TIỀN GIẢM], [NGÀY TẠO], [TRẠNG THÁI], [MÃ KHUYẾN MÃI]) VALUES (N'O00003', N'C0000003', CAST(2200000 AS Numeric(18, 0)), CAST(0 AS Numeric(18, 0)), CAST(N'2026-03-03' AS Date), N'ĐANG CHỜ', NULL)
+INSERT [dbo].[ORDER] ([MÃ ĐƠN HÀNG], [MÃ SỐ KHÁCH HÀNG], [TỔNG TIỀN], [SỐ TIỀN GIẢM], [NGÀY TẠO], [TRẠNG THÁI], [MÃ KHUYẾN MÃI]) VALUES (N'O00004', N'C0000004', CAST(1425000 AS Numeric(18, 0)), CAST(0 AS Numeric(18, 0)), CAST(N'2026-03-04' AS Date), N'ĐÃ HỦY', NULL)
+INSERT [dbo].[ORDER] ([MÃ ĐƠN HÀNG], [MÃ SỐ KHÁCH HÀNG], [TỔNG TIỀN], [SỐ TIỀN GIẢM], [NGÀY TẠO], [TRẠNG THÁI], [MÃ KHUYẾN MÃI]) VALUES (N'O00005', N'C0000005', CAST(1890000 AS Numeric(18, 0)), CAST(100000 AS Numeric(18, 0)), CAST(N'2026-03-05' AS Date), N'ĐÃ THANH TOÁN', N'P001')
+INSERT [dbo].[ORDER] ([MÃ ĐƠN HÀNG], [MÃ SỐ KHÁCH HÀNG], [TỔNG TIỀN], [SỐ TIỀN GIẢM], [NGÀY TẠO], [TRẠNG THÁI], [MÃ KHUYẾN MÃI]) VALUES (N'O00006', N'C0000006', CAST(1535000 AS Numeric(18, 0)), CAST(0 AS Numeric(18, 0)), CAST(N'2026-03-06' AS Date), N'ĐANG CHỜ', NULL)
+INSERT [dbo].[ORDER] ([MÃ ĐƠN HÀNG], [MÃ SỐ KHÁCH HÀNG], [TỔNG TIỀN], [SỐ TIỀN GIẢM], [NGÀY TẠO], [TRẠNG THÁI], [MÃ KHUYẾN MÃI]) VALUES (N'O00007', N'C0000007', CAST(1640000 AS Numeric(18, 0)), CAST(0 AS Numeric(18, 0)), CAST(N'2026-03-07' AS Date), N'ĐÃ THANH TOÁN', NULL)
+INSERT [dbo].[ORDER] ([MÃ ĐƠN HÀNG], [MÃ SỐ KHÁCH HÀNG], [TỔNG TIỀN], [SỐ TIỀN GIẢM], [NGÀY TẠO], [TRẠNG THÁI], [MÃ KHUYẾN MÃI]) VALUES (N'O00008', N'C0000008', CAST(1370000 AS Numeric(18, 0)), CAST(50000 AS Numeric(18, 0)), CAST(N'2026-03-08' AS Date), N'ĐÃ HỦY', N'P010')
+INSERT [dbo].[ORDER] ([MÃ ĐƠN HÀNG], [MÃ SỐ KHÁCH HÀNG], [TỔNG TIỀN], [SỐ TIỀN GIẢM], [NGÀY TẠO], [TRẠNG THÁI], [MÃ KHUYẾN MÃI]) VALUES (N'O00009', N'C0000009', CAST(950000 AS Numeric(18, 0)), CAST(0 AS Numeric(18, 0)), CAST(N'2026-03-09' AS Date), N'ĐÃ THANH TOÁN', NULL)
+INSERT [dbo].[ORDER] ([MÃ ĐƠN HÀNG], [MÃ SỐ KHÁCH HÀNG], [TỔNG TIỀN], [SỐ TIỀN GIẢM], [NGÀY TẠO], [TRẠNG THÁI], [MÃ KHUYẾN MÃI]) VALUES (N'O00010', N'C0000010', CAST(770000 AS Numeric(18, 0)), CAST(0 AS Numeric(18, 0)), CAST(N'2026-03-10' AS Date), N'ĐANG CHỜ', NULL)
+INSERT [dbo].[ORDER] ([MÃ ĐƠN HÀNG], [MÃ SỐ KHÁCH HÀNG], [TỔNG TIỀN], [SỐ TIỀN GIẢM], [NGÀY TẠO], [TRẠNG THÁI], [MÃ KHUYẾN MÃI]) VALUES (N'O00011', N'C0000011', CAST(1550000 AS Numeric(18, 0)), CAST(100000 AS Numeric(18, 0)), CAST(N'2026-03-11' AS Date), N'ĐÃ THANH TOÁN', N'P001')
+INSERT [dbo].[ORDER] ([MÃ ĐƠN HÀNG], [MÃ SỐ KHÁCH HÀNG], [TỔNG TIỀN], [SỐ TIỀN GIẢM], [NGÀY TẠO], [TRẠNG THÁI], [MÃ KHUYẾN MÃI]) VALUES (N'O00012', N'C0000012', CAST(1300000 AS Numeric(18, 0)), CAST(0 AS Numeric(18, 0)), CAST(N'2026-03-12' AS Date), N'ĐÃ HỦY', NULL)
+GO
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00001', N'O00001', CAST(1 AS Numeric(3, 0)), N'TK00001')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00002', N'O00001', CAST(1 AS Numeric(3, 0)), N'TK00002')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00003', N'O00001', CAST(1 AS Numeric(3, 0)), N'TK00003')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00004', N'O00001', CAST(1 AS Numeric(3, 0)), N'TK00004')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00005', N'O00001', CAST(1 AS Numeric(3, 0)), N'TK00005')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00006', N'O00001', CAST(1 AS Numeric(3, 0)), N'TK00006')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00007', N'O00001', CAST(2 AS Numeric(3, 0)), N'F001')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00008', N'O00002', CAST(1 AS Numeric(3, 0)), N'TK00007')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00009', N'O00002', CAST(1 AS Numeric(3, 0)), N'TK00008')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00010', N'O00002', CAST(1 AS Numeric(3, 0)), N'TK00009')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00011', N'O00002', CAST(1 AS Numeric(3, 0)), N'TK00010')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00012', N'O00002', CAST(1 AS Numeric(3, 0)), N'F002')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00013', N'O00003', CAST(1 AS Numeric(3, 0)), N'TK00011')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00014', N'O00003', CAST(1 AS Numeric(3, 0)), N'TK00012')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00015', N'O00003', CAST(1 AS Numeric(3, 0)), N'TK00013')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00016', N'O00003', CAST(1 AS Numeric(3, 0)), N'TK00014')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00017', N'O00003', CAST(1 AS Numeric(3, 0)), N'TK00015')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00018', N'O00003', CAST(1 AS Numeric(3, 0)), N'TK00016')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00019', N'O00003', CAST(2 AS Numeric(3, 0)), N'F003')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00020', N'O00004', CAST(1 AS Numeric(3, 0)), N'TK00017')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00021', N'O00004', CAST(1 AS Numeric(3, 0)), N'TK00018')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00022', N'O00004', CAST(1 AS Numeric(3, 0)), N'TK00019')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00023', N'O00004', CAST(1 AS Numeric(3, 0)), N'TK00020')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00024', N'O00004', CAST(1 AS Numeric(3, 0)), N'F004')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00025', N'O00005', CAST(1 AS Numeric(3, 0)), N'TK00021')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00026', N'O00005', CAST(1 AS Numeric(3, 0)), N'TK00022')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00027', N'O00005', CAST(1 AS Numeric(3, 0)), N'TK00023')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00028', N'O00005', CAST(1 AS Numeric(3, 0)), N'TK00024')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00029', N'O00005', CAST(1 AS Numeric(3, 0)), N'TK00025')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00030', N'O00005', CAST(1 AS Numeric(3, 0)), N'TK00026')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00031', N'O00005', CAST(3 AS Numeric(3, 0)), N'F005')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00032', N'O00006', CAST(1 AS Numeric(3, 0)), N'TK00027')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00033', N'O00006', CAST(1 AS Numeric(3, 0)), N'TK00028')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00034', N'O00006', CAST(1 AS Numeric(3, 0)), N'TK00029')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00035', N'O00006', CAST(1 AS Numeric(3, 0)), N'TK00030')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00036', N'O00006', CAST(1 AS Numeric(3, 0)), N'TK00031')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00037', N'O00006', CAST(1 AS Numeric(3, 0)), N'F006')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00038', N'O00007', CAST(1 AS Numeric(3, 0)), N'TK00032')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00039', N'O00007', CAST(1 AS Numeric(3, 0)), N'TK00033')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00040', N'O00007', CAST(1 AS Numeric(3, 0)), N'TK00034')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00041', N'O00007', CAST(1 AS Numeric(3, 0)), N'TK00035')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00042', N'O00007', CAST(1 AS Numeric(3, 0)), N'TK00036')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00043', N'O00007', CAST(1 AS Numeric(3, 0)), N'TK00037')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00044', N'O00007', CAST(2 AS Numeric(3, 0)), N'F008')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00045', N'O00008', CAST(1 AS Numeric(3, 0)), N'TK00038')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00046', N'O00008', CAST(1 AS Numeric(3, 0)), N'TK00039')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00047', N'O00008', CAST(1 AS Numeric(3, 0)), N'TK00040')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00048', N'O00008', CAST(1 AS Numeric(3, 0)), N'TK00041')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00049', N'O00008', CAST(1 AS Numeric(3, 0)), N'TK00042')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00050', N'O00008', CAST(1 AS Numeric(3, 0)), N'F009')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00051', N'O00009', CAST(1 AS Numeric(3, 0)), N'TK00043')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00052', N'O00009', CAST(1 AS Numeric(3, 0)), N'TK00044')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00053', N'O00009', CAST(1 AS Numeric(3, 0)), N'TK00045')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00054', N'O00009', CAST(1 AS Numeric(3, 0)), N'TK00046')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00055', N'O00009', CAST(1 AS Numeric(3, 0)), N'TK00047')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00056', N'O00009', CAST(1 AS Numeric(3, 0)), N'TK00048')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00057', N'O00009', CAST(1 AS Numeric(3, 0)), N'F001')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00058', N'O00010', CAST(1 AS Numeric(3, 0)), N'TK00049')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00059', N'O00010', CAST(1 AS Numeric(3, 0)), N'TK00050')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00060', N'O00010', CAST(1 AS Numeric(3, 0)), N'TK00051')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00061', N'O00010', CAST(1 AS Numeric(3, 0)), N'TK00052')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00062', N'O00010', CAST(2 AS Numeric(3, 0)), N'F002')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00063', N'O00011', CAST(1 AS Numeric(3, 0)), N'TK00053')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00064', N'O00011', CAST(1 AS Numeric(3, 0)), N'TK00054')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00065', N'O00011', CAST(1 AS Numeric(3, 0)), N'TK00055')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00066', N'O00011', CAST(1 AS Numeric(3, 0)), N'TK00056')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00067', N'O00011', CAST(1 AS Numeric(3, 0)), N'TK00057')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00068', N'O00011', CAST(1 AS Numeric(3, 0)), N'TK00058')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00069', N'O00011', CAST(1 AS Numeric(3, 0)), N'F003')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00070', N'O00012', CAST(1 AS Numeric(3, 0)), N'TK00059')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00071', N'O00012', CAST(1 AS Numeric(3, 0)), N'TK00060')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00072', N'O00012', CAST(1 AS Numeric(3, 0)), N'TK00061')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00073', N'O00012', CAST(1 AS Numeric(3, 0)), N'TK00062')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00074', N'O00012', CAST(1 AS Numeric(3, 0)), N'TK00063')
+INSERT [dbo].[ORDER_DETAIL] ([MÃ ORDER_DETAIL], [MÃ ĐƠN HÀNG], [SỐ LƯỢNG SẢN PHẨM], [MÃ SẢN PHẨM]) VALUES (N'OD00075', N'O00012', CAST(2 AS Numeric(3, 0)), N'F004')
+GO
+INSERT [dbo].[PHỤ ĐỀ] ([MÃ PHIM], [PHỤ ĐỀ]) VALUES (N'MV0001', N'Tiếng Anh')
+INSERT [dbo].[PHỤ ĐỀ] ([MÃ PHIM], [PHỤ ĐỀ]) VALUES (N'MV0001', N'Tiếng Việt')
+INSERT [dbo].[PHỤ ĐỀ] ([MÃ PHIM], [PHỤ ĐỀ]) VALUES (N'MV0003', N'Tiếng Việt')
+INSERT [dbo].[PHỤ ĐỀ] ([MÃ PHIM], [PHỤ ĐỀ]) VALUES (N'MV0005', N'Tiếng Anh')
+INSERT [dbo].[PHỤ ĐỀ] ([MÃ PHIM], [PHỤ ĐỀ]) VALUES (N'MV0006', N'Tiếng Việt')
+INSERT [dbo].[PHỤ ĐỀ] ([MÃ PHIM], [PHỤ ĐỀ]) VALUES (N'MV0007', N'Tiếng Anh')
+INSERT [dbo].[PHỤ ĐỀ] ([MÃ PHIM], [PHỤ ĐỀ]) VALUES (N'MV0008', N'Tiếng Việt')
+INSERT [dbo].[PHỤ ĐỀ] ([MÃ PHIM], [PHỤ ĐỀ]) VALUES (N'MV0009', N'Tiếng Việt')
+INSERT [dbo].[PHỤ ĐỀ] ([MÃ PHIM], [PHỤ ĐỀ]) VALUES (N'MV0010', N'Tiếng Anh')
+GO
+INSERT [dbo].[PRICE] ([LOẠI PHÒNG], [LOẠI GHẾ], [GIÁ VÉ]) VALUES (N'4DX', N'4DX', CAST(300000 AS Numeric(18, 0)))
+INSERT [dbo].[PRICE] ([LOẠI PHÒNG], [LOẠI GHẾ], [GIÁ VÉ]) VALUES (N'IMAX', N'IMAX', CAST(350000 AS Numeric(18, 0)))
+INSERT [dbo].[PRICE] ([LOẠI PHÒNG], [LOẠI GHẾ], [GIÁ VÉ]) VALUES (N'PREMIUM', N'PREMIUM', CAST(250000 AS Numeric(18, 0)))
+INSERT [dbo].[PRICE] ([LOẠI PHÒNG], [LOẠI GHẾ], [GIÁ VÉ]) VALUES (N'SCREENX', N'STANDARD', CAST(120000 AS Numeric(18, 0)))
+INSERT [dbo].[PRICE] ([LOẠI PHÒNG], [LOẠI GHẾ], [GIÁ VÉ]) VALUES (N'SCREENX', N'SWEETBOX', CAST(220000 AS Numeric(18, 0)))
+INSERT [dbo].[PRICE] ([LOẠI PHÒNG], [LOẠI GHẾ], [GIÁ VÉ]) VALUES (N'SCREENX', N'VIP', CAST(170000 AS Numeric(18, 0)))
+INSERT [dbo].[PRICE] ([LOẠI PHÒNG], [LOẠI GHẾ], [GIÁ VÉ]) VALUES (N'STANDARD', N'STANDARD', CAST(100000 AS Numeric(18, 0)))
+INSERT [dbo].[PRICE] ([LOẠI PHÒNG], [LOẠI GHẾ], [GIÁ VÉ]) VALUES (N'STANDARD', N'SWEETBOX', CAST(200000 AS Numeric(18, 0)))
+INSERT [dbo].[PRICE] ([LOẠI PHÒNG], [LOẠI GHẾ], [GIÁ VÉ]) VALUES (N'STANDARD', N'VIP', CAST(150000 AS Numeric(18, 0)))
+INSERT [dbo].[PRICE] ([LOẠI PHÒNG], [LOẠI GHẾ], [GIÁ VÉ]) VALUES (N'SWEETBOX', N'SWEETBOX', CAST(250000 AS Numeric(18, 0)))
+GO
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'F001')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'F002')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'F003')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'F004')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'F005')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'F006')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'F007')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'F008')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'F009')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'F010')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00001')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00002')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00003')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00004')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00005')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00006')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00007')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00008')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00009')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00010')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00011')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00012')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00013')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00014')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00015')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00016')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00017')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00018')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00019')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00020')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00021')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00022')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00023')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00024')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00025')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00026')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00027')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00028')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00029')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00030')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00031')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00032')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00033')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00034')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00035')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00036')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00037')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00038')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00039')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00040')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00041')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00042')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00043')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00044')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00045')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00046')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00047')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00048')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00049')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00050')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00051')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00052')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00053')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00054')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00055')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00056')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00057')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00058')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00059')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00060')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00061')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00062')
+INSERT [dbo].[PRODUCT] ([MÃ SẢN PHẨM]) VALUES (N'TK00063')
+GO
+INSERT [dbo].[PROMOTION] ([MÃ KHUYẾN MÃI], [TÊN KHUYẾN MÃI], [LOẠI KHUYẾN MÃI], [MÔ TẢ], [PHẦN TRĂM GIẢM], [GIÁ TRỊ GIẢM TỐI ĐA], [NGÀY TẠO], [NGÀY CẬP NHẬT], [NGÀY BẮT ĐẦU], [NGÀY KẾT THÚC], [TRẠNG THÁI], [PROMOTION_CODE]) VALUES (N'P001', N'Ưu đãi sinh nhật', N'PHẦN TRĂM', N'Giảm 20% cho khách hàng trong tháng sinh nhật', CAST(20.00 AS Decimal(5, 2)), CAST(100000 AS Numeric(6, 0)), CAST(N'2026-03-01' AS Date), CAST(N'2026-03-02' AS Date), CAST(N'2026-04-01' AS Date), CAST(N'2026-04-30' AS Date), N'HOẠT ĐỘNG', N'SINHNHAT')
+INSERT [dbo].[PROMOTION] ([MÃ KHUYẾN MÃI], [TÊN KHUYẾN MÃI], [LOẠI KHUYẾN MÃI], [MÔ TẢ], [PHẦN TRĂM GIẢM], [GIÁ TRỊ GIẢM TỐI ĐA], [NGÀY TẠO], [NGÀY CẬP NHẬT], [NGÀY BẮT ĐẦU], [NGÀY KẾT THÚC], [TRẠNG THÁI], [PROMOTION_CODE]) VALUES (N'P002', N'Ưu đãi VIP 1', N'PHẦN TRĂM', N'Khách VIP giảm 20% tối đa 100k', CAST(20.00 AS Decimal(5, 2)), CAST(100000 AS Numeric(6, 0)), CAST(N'2026-03-05' AS Date), CAST(N'2026-03-06' AS Date), CAST(N'2026-03-10' AS Date), CAST(N'2026-05-10' AS Date), N'HOẠT ĐỘNG', N'VIP20A')
+INSERT [dbo].[PROMOTION] ([MÃ KHUYẾN MÃI], [TÊN KHUYẾN MÃI], [LOẠI KHUYẾN MÃI], [MÔ TẢ], [PHẦN TRĂM GIẢM], [GIÁ TRỊ GIẢM TỐI ĐA], [NGÀY TẠO], [NGÀY CẬP NHẬT], [NGÀY BẮT ĐẦU], [NGÀY KẾT THÚC], [TRẠNG THÁI], [PROMOTION_CODE]) VALUES (N'P003', N'Ưu đãi VIP 2', N'PHẦN TRĂM', N'Khách VIP giảm 20% tối đa 100k', CAST(20.00 AS Decimal(5, 2)), CAST(100000 AS Numeric(6, 0)), CAST(N'2026-03-05' AS Date), CAST(N'2026-03-06' AS Date), CAST(N'2026-03-10' AS Date), CAST(N'2026-05-10' AS Date), N'HOẠT ĐỘNG', N'VIP20B')
+INSERT [dbo].[PROMOTION] ([MÃ KHUYẾN MÃI], [TÊN KHUYẾN MÃI], [LOẠI KHUYẾN MÃI], [MÔ TẢ], [PHẦN TRĂM GIẢM], [GIÁ TRỊ GIẢM TỐI ĐA], [NGÀY TẠO], [NGÀY CẬP NHẬT], [NGÀY BẮT ĐẦU], [NGÀY KẾT THÚC], [TRẠNG THÁI], [PROMOTION_CODE]) VALUES (N'P004', N'Ưu đãi VVIP 1', N'PHẦN TRĂM', N'Khách VVIP giảm 30% tối đa 200k', CAST(30.00 AS Decimal(5, 2)), CAST(200000 AS Numeric(6, 0)), CAST(N'2026-03-10' AS Date), CAST(N'2026-03-11' AS Date), CAST(N'2026-03-15' AS Date), CAST(N'2026-06-15' AS Date), N'HOẠT ĐỘNG', N'VVIP30A')
+INSERT [dbo].[PROMOTION] ([MÃ KHUYẾN MÃI], [TÊN KHUYẾN MÃI], [LOẠI KHUYẾN MÃI], [MÔ TẢ], [PHẦN TRĂM GIẢM], [GIÁ TRỊ GIẢM TỐI ĐA], [NGÀY TẠO], [NGÀY CẬP NHẬT], [NGÀY BẮT ĐẦU], [NGÀY KẾT THÚC], [TRẠNG THÁI], [PROMOTION_CODE]) VALUES (N'P005', N'Ưu đãi VVIP 2', N'PHẦN TRĂM', N'Khách VVIP giảm 30% tối đa 200k', CAST(30.00 AS Decimal(5, 2)), CAST(200000 AS Numeric(6, 0)), CAST(N'2026-03-10' AS Date), CAST(N'2026-03-11' AS Date), CAST(N'2026-03-15' AS Date), CAST(N'2026-06-15' AS Date), N'HOẠT ĐỘNG', N'VVIP30B')
+INSERT [dbo].[PROMOTION] ([MÃ KHUYẾN MÃI], [TÊN KHUYẾN MÃI], [LOẠI KHUYẾN MÃI], [MÔ TẢ], [PHẦN TRĂM GIẢM], [GIÁ TRỊ GIẢM TỐI ĐA], [NGÀY TẠO], [NGÀY CẬP NHẬT], [NGÀY BẮT ĐẦU], [NGÀY KẾT THÚC], [TRẠNG THÁI], [PROMOTION_CODE]) VALUES (N'P006', N'Ưu đãi VVIP 3', N'PHẦN TRĂM', N'Khách VVIP giảm 30% tối đa 200k', CAST(30.00 AS Decimal(5, 2)), CAST(200000 AS Numeric(6, 0)), CAST(N'2026-03-10' AS Date), CAST(N'2026-03-11' AS Date), CAST(N'2026-03-15' AS Date), CAST(N'2026-06-15' AS Date), N'HOẠT ĐỘNG', N'VVIP30C')
+INSERT [dbo].[PROMOTION] ([MÃ KHUYẾN MÃI], [TÊN KHUYẾN MÃI], [LOẠI KHUYẾN MÃI], [MÔ TẢ], [PHẦN TRĂM GIẢM], [GIÁ TRỊ GIẢM TỐI ĐA], [NGÀY TẠO], [NGÀY CẬP NHẬT], [NGÀY BẮT ĐẦU], [NGÀY KẾT THÚC], [TRẠNG THÁI], [PROMOTION_CODE]) VALUES (N'P007', N'Khuyến mãi test', N'PHẦN TRĂM', N'Dùng thử hệ thống', CAST(10.00 AS Decimal(5, 2)), CAST(50000 AS Numeric(6, 0)), CAST(N'2026-03-01' AS Date), CAST(N'2026-03-01' AS Date), CAST(N'2026-03-01' AS Date), CAST(N'2026-03-31' AS Date), N'HẾT HẠN', N'TEST10')
+INSERT [dbo].[PROMOTION] ([MÃ KHUYẾN MÃI], [TÊN KHUYẾN MÃI], [LOẠI KHUYẾN MÃI], [MÔ TẢ], [PHẦN TRĂM GIẢM], [GIÁ TRỊ GIẢM TỐI ĐA], [NGÀY TẠO], [NGÀY CẬP NHẬT], [NGÀY BẮT ĐẦU], [NGÀY KẾT THÚC], [TRẠNG THÁI], [PROMOTION_CODE]) VALUES (N'P008', N'Flash sale cuối tuần', N'PHẦN TRĂM', N'Giảm 15% cuối tuần', CAST(15.00 AS Decimal(5, 2)), CAST(80000 AS Numeric(6, 0)), CAST(N'2026-03-15' AS Date), CAST(N'2026-03-16' AS Date), CAST(N'2026-03-20' AS Date), CAST(N'2026-04-20' AS Date), N'TẠM DỪNG', N'FLASH15')
+INSERT [dbo].[PROMOTION] ([MÃ KHUYẾN MÃI], [TÊN KHUYẾN MÃI], [LOẠI KHUYẾN MÃI], [MÔ TẢ], [PHẦN TRĂM GIẢM], [GIÁ TRỊ GIẢM TỐI ĐA], [NGÀY TẠO], [NGÀY CẬP NHẬT], [NGÀY BẮT ĐẦU], [NGÀY KẾT THÚC], [TRẠNG THÁI], [PROMOTION_CODE]) VALUES (N'P009', N'Khuyến mãi hè', N'PHẦN TRĂM', N'Chưa áp dụng', CAST(25.00 AS Decimal(5, 2)), CAST(150000 AS Numeric(6, 0)), CAST(N'2026-03-20' AS Date), CAST(N'2026-03-21' AS Date), CAST(N'2026-05-01' AS Date), CAST(N'2026-06-30' AS Date), N'NHÁP', N'SUMMER25')
+INSERT [dbo].[PROMOTION] ([MÃ KHUYẾN MÃI], [TÊN KHUYẾN MÃI], [LOẠI KHUYẾN MÃI], [MÔ TẢ], [PHẦN TRĂM GIẢM], [GIÁ TRỊ GIẢM TỐI ĐA], [NGÀY TẠO], [NGÀY CẬP NHẬT], [NGÀY BẮT ĐẦU], [NGÀY KẾT THÚC], [TRẠNG THÁI], [PROMOTION_CODE]) VALUES (N'P010', N'Giảm trực tiếp 50K', N'GIÁ TRỊ', N'Giảm trực tiếp 50k cho đơn hàng', NULL, CAST(50000 AS Numeric(6, 0)), CAST(N'2026-03-10' AS Date), CAST(N'2026-03-12' AS Date), CAST(N'2026-03-15' AS Date), CAST(N'2026-04-15' AS Date), N'HOẠT ĐỘNG', N'LESS50')
+INSERT [dbo].[PROMOTION] ([MÃ KHUYẾN MÃI], [TÊN KHUYẾN MÃI], [LOẠI KHUYẾN MÃI], [MÔ TẢ], [PHẦN TRĂM GIẢM], [GIÁ TRỊ GIẢM TỐI ĐA], [NGÀY TẠO], [NGÀY CẬP NHẬT], [NGÀY BẮT ĐẦU], [NGÀY KẾT THÚC], [TRẠNG THÁI], [PROMOTION_CODE]) VALUES (N'P011', N'Khuyến mãi hè 26', N'PHẦN TRĂM', N'Đã áp dụng', CAST(25.00 AS Decimal(5, 2)), CAST(150000 AS Numeric(6, 0)), CAST(N'2026-03-20' AS Date), CAST(N'2026-03-21' AS Date), CAST(N'2026-04-01' AS Date), CAST(N'2026-06-30' AS Date), N'HOẠT ĐỘNG', N'SUMMER26')
+
+GO
+INSERT [dbo].[RATING] ([MÃ PHIM], [MÃ SỐ KHÁCH HÀNG], [ĐIỂM RATING], [NGÀY TẠO], [NGÀY CẬP NHẬT]) VALUES (N'MV0001', N'C0000001', CAST(5 AS Numeric(1, 0)), CAST(N'2026-04-04' AS Date), CAST(N'2026-04-05' AS Date))
+INSERT [dbo].[RATING] ([MÃ PHIM], [MÃ SỐ KHÁCH HÀNG], [ĐIỂM RATING], [NGÀY TẠO], [NGÀY CẬP NHẬT]) VALUES (N'MV0003', N'C0000005', CAST(3 AS Numeric(1, 0)), CAST(N'2026-04-02' AS Date), NULL)
+INSERT [dbo].[RATING] ([MÃ PHIM], [MÃ SỐ KHÁCH HÀNG], [ĐIỂM RATING], [NGÀY TẠO], [NGÀY CẬP NHẬT]) VALUES (N'MV0005', N'C0000007', CAST(4 AS Numeric(1, 0)), CAST(N'2026-04-03' AS Date), NULL)
+INSERT [dbo].[RATING] ([MÃ PHIM], [MÃ SỐ KHÁCH HÀNG], [ĐIỂM RATING], [NGÀY TẠO], [NGÀY CẬP NHẬT]) VALUES (N'MV0008', N'C0000009', CAST(2 AS Numeric(1, 0)), CAST(N'2026-04-03' AS Date), CAST(N'2026-04-06' AS Date))
+INSERT [dbo].[RATING] ([MÃ PHIM], [MÃ SỐ KHÁCH HÀNG], [ĐIỂM RATING], [NGÀY TẠO], [NGÀY CẬP NHẬT]) VALUES (N'MV0010', N'C0000011', CAST(5 AS Numeric(1, 0)), CAST(N'2026-04-05' AS Date), NULL)
+GO
+INSERT [dbo].[ROOM] ([MÃ SỐ RẠP], [MÃ PHÒNG], [TÊN PHÒNG], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [TRẠNG THÁI], [LOẠI PHÒNG]) VALUES (N'RAP001', N'P01', N'Phòng 1', N'Phòng tiêu chuẩn', N'Màn hình 2D, âm thanh Dolby', N'HOẠT ĐỘNG', N'STANDARD')
+INSERT [dbo].[ROOM] ([MÃ SỐ RẠP], [MÃ PHÒNG], [TÊN PHÒNG], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [TRẠNG THÁI], [LOẠI PHÒNG]) VALUES (N'RAP001', N'P02', N'Phòng 2', N'Phòng IMAX', N'Màn hình lớn, âm thanh vòm', N'HOẠT ĐỘNG', N'IMAX')
+INSERT [dbo].[ROOM] ([MÃ SỐ RẠP], [MÃ PHÒNG], [TÊN PHÒNG], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [TRẠNG THÁI], [LOẠI PHÒNG]) VALUES (N'RAP002', N'P01', N'Phòng 1', N'Phòng 4DX', N'Ghế rung, hiệu ứng nước/gió', N'HOẠT ĐỘNG', N'4DX')
+INSERT [dbo].[ROOM] ([MÃ SỐ RẠP], [MÃ PHÒNG], [TÊN PHÒNG], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [TRẠNG THÁI], [LOẠI PHÒNG]) VALUES (N'RAP002', N'P02', N'Phòng 2', N'Phòng Premium', N'Ghế VIP, không gian rộng', N'HOẠT ĐỘNG', N'PREMIUM')
+INSERT [dbo].[ROOM] ([MÃ SỐ RẠP], [MÃ PHÒNG], [TÊN PHÒNG], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [TRẠNG THÁI], [LOẠI PHÒNG]) VALUES (N'RAP003', N'P01', N'Phòng 1', N'Phòng ScreenX', N'Màn hình 270 độ', N'HOẠT ĐỘNG', N'SCREENX')
+INSERT [dbo].[ROOM] ([MÃ SỐ RẠP], [MÃ PHÒNG], [TÊN PHÒNG], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [TRẠNG THÁI], [LOẠI PHÒNG]) VALUES (N'RAP003', N'P02', N'Phòng 2', N'Phòng Sweetbox', N'Ghế đôi cho cặp', N'HOẠT ĐỘNG', N'SWEETBOX')
+INSERT [dbo].[ROOM] ([MÃ SỐ RẠP], [MÃ PHÒNG], [TÊN PHÒNG], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [TRẠNG THÁI], [LOẠI PHÒNG]) VALUES (N'RAP004', N'P01', N'Phòng 1', N'Phòng tiêu chuẩn', N'Màn hình 2D', N'BẢO TRÌ', N'STANDARD')
+INSERT [dbo].[ROOM] ([MÃ SỐ RẠP], [MÃ PHÒNG], [TÊN PHÒNG], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [TRẠNG THÁI], [LOẠI PHÒNG]) VALUES (N'RAP004', N'P02', N'Phòng 2', N'Phòng IMAX', N'Màn hình lớn', N'BẢO TRÌ', N'IMAX')
+INSERT [dbo].[ROOM] ([MÃ SỐ RẠP], [MÃ PHÒNG], [TÊN PHÒNG], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [TRẠNG THÁI], [LOẠI PHÒNG]) VALUES (N'RAP005', N'P01', N'Phòng 1', N'Phòng Premium', N'Ghế VIP', N'ĐÓNG', N'PREMIUM')
+INSERT [dbo].[ROOM] ([MÃ SỐ RẠP], [MÃ PHÒNG], [TÊN PHÒNG], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [TRẠNG THÁI], [LOẠI PHÒNG]) VALUES (N'RAP005', N'P02', N'Phòng 2', N'Phòng 4DX', N'Hiệu ứng chuyển động', N'ĐÓNG', N'4DX')
+GO
+INSERT [dbo].[ROOM_TYPE] ([LOẠI PHÒNG]) VALUES (N'4DX')
+INSERT [dbo].[ROOM_TYPE] ([LOẠI PHÒNG]) VALUES (N'IMAX')
+INSERT [dbo].[ROOM_TYPE] ([LOẠI PHÒNG]) VALUES (N'PREMIUM')
+INSERT [dbo].[ROOM_TYPE] ([LOẠI PHÒNG]) VALUES (N'SCREENX')
+INSERT [dbo].[ROOM_TYPE] ([LOẠI PHÒNG]) VALUES (N'STANDARD')
+INSERT [dbo].[ROOM_TYPE] ([LOẠI PHÒNG]) VALUES (N'SWEETBOX')
+GO
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P01', N'S01', N'Ghế 1', N'Ghế thường', N'Nệm êm', N'STANDARD')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P01', N'S02', N'Ghế 2', N'Ghế thường', N'Nệm êm', N'STANDARD')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P01', N'S03', N'Ghế 3', N'Ghế VIP', N'Rộng hơn', N'VIP')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P01', N'S04', N'Ghế 4', N'Ghế VIP', N'Rộng hơn', N'VIP')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P01', N'S05', N'Ghế 5', N'Ghế đôi', N'Cho cặp', N'SWEETBOX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P01', N'S06', N'Ghế 6', N'Ghế thường', N'Nệm êm', N'STANDARD')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P01', N'S07', N'Ghế 7', N'Ghế thường', N'Nệm êm', N'STANDARD')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P01', N'S08', N'Ghế 8', N'Ghế VIP', N'Rộng hơn', N'VIP')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P01', N'S09', N'Ghế 9', N'Ghế thường', N'Nệm êm', N'STANDARD')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P01', N'S10', N'Ghế 10', N'Ghế đôi', N'Cho cặp', N'SWEETBOX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P02', N'S01', N'Ghế 1', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P02', N'S02', N'Ghế 2', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P02', N'S03', N'Ghế 3', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P02', N'S04', N'Ghế 4', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P02', N'S05', N'Ghế 5', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P02', N'S06', N'Ghế 6', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P02', N'S07', N'Ghế 7', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P02', N'S08', N'Ghế 8', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P02', N'S09', N'Ghế 9', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP001', N'P02', N'S10', N'Ghế 10', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P01', N'S01', N'Ghế 1', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P01', N'S02', N'Ghế 2', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P01', N'S03', N'Ghế 3', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P01', N'S04', N'Ghế 4', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P01', N'S05', N'Ghế 5', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P01', N'S06', N'Ghế 6', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P01', N'S07', N'Ghế 7', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P01', N'S08', N'Ghế 8', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P01', N'S09', N'Ghế 9', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P01', N'S10', N'Ghế 10', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P02', N'S01', N'Ghế 1', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P02', N'S02', N'Ghế 2', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P02', N'S03', N'Ghế 3', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P02', N'S04', N'Ghế 4', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P02', N'S05', N'Ghế 5', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P02', N'S06', N'Ghế 6', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P02', N'S07', N'Ghế 7', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P02', N'S08', N'Ghế 8', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P02', N'S09', N'Ghế 9', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP002', N'P02', N'S10', N'Ghế 10', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P01', N'S01', N'Ghế 1', N'Ghế thường', N'Nệm êm', N'STANDARD')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P01', N'S02', N'Ghế 2', N'Ghế VIP', N'Rộng hơn', N'VIP')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P01', N'S03', N'Ghế 3', N'Ghế đôi', N'Cho cặp', N'SWEETBOX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P01', N'S04', N'Ghế 4', N'Ghế thường', N'Nệm êm', N'STANDARD')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P01', N'S05', N'Ghế 5', N'Ghế VIP', N'Rộng hơn', N'VIP')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P01', N'S06', N'Ghế 6', N'Ghế thường', N'Nệm êm', N'STANDARD')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P01', N'S07', N'Ghế 7', N'Ghế đôi', N'Cho cặp', N'SWEETBOX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P01', N'S08', N'Ghế 8', N'Ghế VIP', N'Rộng hơn', N'VIP')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P01', N'S09', N'Ghế 9', N'Ghế thường', N'Nệm êm', N'STANDARD')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P01', N'S10', N'Ghế 10', N'Ghế VIP', N'Rộng hơn', N'VIP')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P02', N'S01', N'Ghế 1', N'Ghế đôi', N'Cho cặp', N'SWEETBOX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P02', N'S02', N'Ghế 2', N'Ghế đôi', N'Cho cặp', N'SWEETBOX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P02', N'S03', N'Ghế 3', N'Ghế đôi', N'Cho cặp', N'SWEETBOX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P02', N'S04', N'Ghế 4', N'Ghế đôi', N'Cho cặp', N'SWEETBOX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P02', N'S05', N'Ghế 5', N'Ghế đôi', N'Cho cặp', N'SWEETBOX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P02', N'S06', N'Ghế 6', N'Ghế đôi', N'Cho cặp', N'SWEETBOX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P02', N'S07', N'Ghế 7', N'Ghế đôi', N'Cho cặp', N'SWEETBOX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P02', N'S08', N'Ghế 8', N'Ghế đôi', N'Cho cặp', N'SWEETBOX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P02', N'S09', N'Ghế 9', N'Ghế đôi', N'Cho cặp', N'SWEETBOX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP003', N'P02', N'S10', N'Ghế 10', N'Ghế đôi', N'Cho cặp', N'SWEETBOX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P01', N'S01', N'Ghế 1', N'Ghế thường', N'Nệm êm', N'STANDARD')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P01', N'S02', N'Ghế 2', N'Ghế thường', N'Nệm êm', N'STANDARD')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P01', N'S03', N'Ghế 3', N'Ghế VIP', N'Rộng hơn', N'VIP')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P01', N'S04', N'Ghế 4', N'Ghế VIP', N'Rộng hơn', N'VIP')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P01', N'S05', N'Ghế 5', N'Ghế đôi', N'Cho cặp', N'SWEETBOX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P01', N'S06', N'Ghế 6', N'Ghế thường', N'Nệm êm', N'STANDARD')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P01', N'S07', N'Ghế 7', N'Ghế thường', N'Nệm êm', N'STANDARD')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P01', N'S08', N'Ghế 8', N'Ghế VIP', N'Rộng hơn', N'VIP')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P01', N'S09', N'Ghế 9', N'Ghế thường', N'Nệm êm', N'STANDARD')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P01', N'S10', N'Ghế 10', N'Ghế đôi', N'Cho cặp', N'SWEETBOX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P02', N'S01', N'Ghế 1', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P02', N'S02', N'Ghế 2', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P02', N'S03', N'Ghế 3', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P02', N'S04', N'Ghế 4', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P02', N'S05', N'Ghế 5', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P02', N'S06', N'Ghế 6', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P02', N'S07', N'Ghế 7', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P02', N'S08', N'Ghế 8', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P02', N'S09', N'Ghế 9', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP004', N'P02', N'S10', N'Ghế 10', N'Ghế IMAX', N'Màn hình lớn', N'IMAX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P01', N'S01', N'Ghế 1', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P01', N'S02', N'Ghế 2', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P01', N'S03', N'Ghế 3', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P01', N'S04', N'Ghế 4', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P01', N'S05', N'Ghế 5', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P01', N'S06', N'Ghế 6', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P01', N'S07', N'Ghế 7', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P01', N'S08', N'Ghế 8', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P01', N'S09', N'Ghế 9', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P01', N'S10', N'Ghế 10', N'Ghế cao cấp', N'Ngả lưng', N'PREMIUM')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P02', N'S01', N'Ghế 1', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P02', N'S02', N'Ghế 2', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P02', N'S03', N'Ghế 3', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P02', N'S04', N'Ghế 4', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P02', N'S05', N'Ghế 5', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P02', N'S06', N'Ghế 6', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P02', N'S07', N'Ghế 7', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P02', N'S08', N'Ghế 8', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P02', N'S09', N'Ghế 9', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+INSERT [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [TÊN GHẾ], [MÔ TẢ], [THÔNG SỐ KỸ THUẬT], [LOẠI GHẾ]) VALUES (N'RAP005', N'P02', N'S10', N'Ghế 10', N'Ghế 4DX', N'Rung chuyển', N'4DX')
+GO
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S01', N'ST001', N'SS00001', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S01', N'ST002', N'SS00011', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S01', N'ST003', N'SS00021', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S02', N'ST001', N'SS00002', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S02', N'ST002', N'SS00012', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S02', N'ST003', N'SS00022', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S03', N'ST001', N'SS00003', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S03', N'ST002', N'SS00013', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S03', N'ST003', N'SS00023', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S04', N'ST001', N'SS00004', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S04', N'ST002', N'SS00014', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S04', N'ST003', N'SS00024', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S05', N'ST001', N'SS00005', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S05', N'ST002', N'SS00015', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S05', N'ST003', N'SS00025', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S06', N'ST001', N'SS00006', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S06', N'ST002', N'SS00016', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S06', N'ST003', N'SS00026', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S07', N'ST001', N'SS00007', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S07', N'ST002', N'SS00017', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S07', N'ST003', N'SS00027', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S08', N'ST001', N'SS00008', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S08', N'ST002', N'SS00018', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S08', N'ST003', N'SS00028', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S09', N'ST001', N'SS00009', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S09', N'ST002', N'SS00019', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S09', N'ST003', N'SS00029', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S10', N'ST001', N'SS00010', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S10', N'ST002', N'SS00020', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P01', N'S10', N'ST003', N'SS00030', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S01', N'ST004', N'SS00031', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S01', N'ST005', N'SS00041', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S01', N'ST006', N'SS00051', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S02', N'ST004', N'SS00032', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S02', N'ST005', N'SS00042', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S02', N'ST006', N'SS00052', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S03', N'ST004', N'SS00033', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S03', N'ST005', N'SS00043', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S03', N'ST006', N'SS00053', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S04', N'ST004', N'SS00034', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S04', N'ST005', N'SS00044', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S04', N'ST006', N'SS00054', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S05', N'ST004', N'SS00035', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S05', N'ST005', N'SS00045', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S05', N'ST006', N'SS00055', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S06', N'ST004', N'SS00036', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S06', N'ST005', N'SS00046', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S06', N'ST006', N'SS00056', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S07', N'ST004', N'SS00037', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S07', N'ST005', N'SS00047', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S07', N'ST006', N'SS00057', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S08', N'ST004', N'SS00038', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S08', N'ST005', N'SS00048', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S08', N'ST006', N'SS00058', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S09', N'ST004', N'SS00039', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S09', N'ST005', N'SS00049', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S09', N'ST006', N'SS00059', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S10', N'ST004', N'SS00040', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S10', N'ST005', N'SS00050', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP001', N'P02', N'S10', N'ST006', N'SS00060', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S01', N'ST007', N'SS00061', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S01', N'ST008', N'SS00071', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S01', N'ST009', N'SS00081', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S02', N'ST007', N'SS00062', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S02', N'ST008', N'SS00072', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S02', N'ST009', N'SS00082', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S03', N'ST007', N'SS00063', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S03', N'ST008', N'SS00073', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S03', N'ST009', N'SS00083', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S04', N'ST007', N'SS00064', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S04', N'ST008', N'SS00074', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S04', N'ST009', N'SS00084', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S05', N'ST007', N'SS00065', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S05', N'ST008', N'SS00075', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S05', N'ST009', N'SS00085', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S06', N'ST007', N'SS00066', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S06', N'ST008', N'SS00076', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S06', N'ST009', N'SS00086', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S07', N'ST007', N'SS00067', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S07', N'ST008', N'SS00077', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S07', N'ST009', N'SS00087', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S08', N'ST007', N'SS00068', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S08', N'ST008', N'SS00078', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S08', N'ST009', N'SS00088', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S09', N'ST007', N'SS00069', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S09', N'ST008', N'SS00079', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S09', N'ST009', N'SS00089', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S10', N'ST007', N'SS00070', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S10', N'ST008', N'SS00080', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P01', N'S10', N'ST009', N'SS00090', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S01', N'ST010', N'SS00091', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S01', N'ST011', N'SS00101', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S01', N'ST012', N'SS00111', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S02', N'ST010', N'SS00092', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S02', N'ST011', N'SS00102', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S02', N'ST012', N'SS00112', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S03', N'ST010', N'SS00093', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S03', N'ST011', N'SS00103', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S03', N'ST012', N'SS00113', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S04', N'ST010', N'SS00094', N'KHÔNG THỂ CHỌN')
+GO
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S04', N'ST011', N'SS00104', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S04', N'ST012', N'SS00114', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S05', N'ST010', N'SS00095', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S05', N'ST011', N'SS00105', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S05', N'ST012', N'SS00115', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S06', N'ST010', N'SS00096', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S06', N'ST011', N'SS00106', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S06', N'ST012', N'SS00116', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S07', N'ST010', N'SS00097', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S07', N'ST011', N'SS00107', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S07', N'ST012', N'SS00117', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S08', N'ST010', N'SS00098', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S08', N'ST011', N'SS00108', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S08', N'ST012', N'SS00118', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S09', N'ST010', N'SS00099', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S09', N'ST011', N'SS00109', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S09', N'ST012', N'SS00119', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S10', N'ST010', N'SS00100', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S10', N'ST011', N'SS00110', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP002', N'P02', N'S10', N'ST012', N'SS00120', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S01', N'ST013', N'SS00121', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S01', N'ST014', N'SS00131', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S01', N'ST015', N'SS00141', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S02', N'ST013', N'SS00122', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S02', N'ST014', N'SS00132', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S02', N'ST015', N'SS00142', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S03', N'ST013', N'SS00123', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S03', N'ST014', N'SS00133', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S03', N'ST015', N'SS00143', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S04', N'ST013', N'SS00124', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S04', N'ST014', N'SS00134', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S04', N'ST015', N'SS00144', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S05', N'ST013', N'SS00125', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S05', N'ST014', N'SS00135', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S05', N'ST015', N'SS00145', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S06', N'ST013', N'SS00126', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S06', N'ST014', N'SS00136', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S06', N'ST015', N'SS00146', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S07', N'ST013', N'SS00127', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S07', N'ST014', N'SS00137', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S07', N'ST015', N'SS00147', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S08', N'ST013', N'SS00128', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S08', N'ST014', N'SS00138', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S08', N'ST015', N'SS00148', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S09', N'ST013', N'SS00129', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S09', N'ST014', N'SS00139', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S09', N'ST015', N'SS00149', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S10', N'ST013', N'SS00130', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S10', N'ST014', N'SS00140', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P01', N'S10', N'ST015', N'SS00150', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S01', N'ST016', N'SS00151', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S01', N'ST017', N'SS00161', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S01', N'ST018', N'SS00171', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S02', N'ST016', N'SS00152', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S02', N'ST017', N'SS00162', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S02', N'ST018', N'SS00172', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S03', N'ST016', N'SS00153', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S03', N'ST017', N'SS00163', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S03', N'ST018', N'SS00173', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S04', N'ST016', N'SS00154', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S04', N'ST017', N'SS00164', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S04', N'ST018', N'SS00174', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S05', N'ST016', N'SS00155', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S05', N'ST017', N'SS00165', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S05', N'ST018', N'SS00175', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S06', N'ST016', N'SS00156', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S06', N'ST017', N'SS00166', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S06', N'ST018', N'SS00176', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S07', N'ST016', N'SS00157', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S07', N'ST017', N'SS00167', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S07', N'ST018', N'SS00177', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S08', N'ST016', N'SS00158', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S08', N'ST017', N'SS00168', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S08', N'ST018', N'SS00178', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S09', N'ST016', N'SS00159', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S09', N'ST017', N'SS00169', N'CHƯA CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S09', N'ST018', N'SS00179', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S10', N'ST016', N'SS00160', N'KHÔNG THỂ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S10', N'ST017', N'SS00170', N'ĐÃ CHỌN')
+INSERT [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI GHẾ]) VALUES (N'RAP003', N'P02', N'S10', N'ST018', N'SS00180', N'KHÔNG THỂ CHỌN')
+GO
+INSERT [dbo].[SEAT_TYPE] ([LOẠI GHẾ]) VALUES (N'4DX')
+INSERT [dbo].[SEAT_TYPE] ([LOẠI GHẾ]) VALUES (N'IMAX')
+INSERT [dbo].[SEAT_TYPE] ([LOẠI GHẾ]) VALUES (N'PREMIUM')
+INSERT [dbo].[SEAT_TYPE] ([LOẠI GHẾ]) VALUES (N'STANDARD')
+INSERT [dbo].[SEAT_TYPE] ([LOẠI GHẾ]) VALUES (N'SWEETBOX')
+INSERT [dbo].[SEAT_TYPE] ([LOẠI GHẾ]) VALUES (N'VIP')
+GO
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST001', CAST(N'2026-04-03' AS Date), CAST(N'08:00:00' AS Time), CAST(N'11:16:00' AS Time), CAST(N'2026-03-28' AS Date), CAST(N'2026-03-29' AS Date), N'KẾT THÚC', N'P01', N'RAP001', N'MV0001')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST002', CAST(N'2026-04-04' AS Date), CAST(N'11:30:00' AS Time), CAST(N'13:35:00' AS Time), CAST(N'2026-03-28' AS Date), CAST(N'2026-03-29' AS Date), N'HOẠT ĐỘNG', N'P01', N'RAP001', N'MV0002')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST003', CAST(N'2026-04-06' AS Date), CAST(N'13:50:00' AS Time), CAST(N'15:57:00' AS Time), CAST(N'2026-03-28' AS Date), CAST(N'2026-03-30' AS Date), N'NHÁP', N'P01', N'RAP001', N'MV0003')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST004', CAST(N'2026-04-03' AS Date), CAST(N'08:30:00' AS Time), CAST(N'11:34:00' AS Time), CAST(N'2026-03-28' AS Date), CAST(N'2026-03-29' AS Date), N'KẾT THÚC', N'P02', N'RAP001', N'MV0006')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST005', CAST(N'2026-04-04' AS Date), CAST(N'11:50:00' AS Time), CAST(N'14:33:00' AS Time), CAST(N'2026-03-28' AS Date), CAST(N'2026-03-30' AS Date), N'HOẠT ĐỘNG', N'P02', N'RAP001', N'MV0008')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST006', CAST(N'2026-04-06' AS Date), CAST(N'14:50:00' AS Time), CAST(N'16:48:00' AS Time), CAST(N'2026-03-28' AS Date), CAST(N'2026-03-31' AS Date), N'NHÁP', N'P02', N'RAP001', N'MV0004')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST007', CAST(N'2026-04-02' AS Date), CAST(N'08:00:00' AS Time), CAST(N'10:07:00' AS Time), CAST(N'2026-03-30' AS Date), CAST(N'2026-03-31' AS Date), N'KẾT THÚC', N'P01', N'RAP002', N'MV0003')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST008', CAST(N'2026-04-04' AS Date), CAST(N'10:20:00' AS Time), CAST(N'12:33:00' AS Time), CAST(N'2026-03-30' AS Date), CAST(N'2026-03-31' AS Date), N'HOẠT ĐỘNG', N'P01', N'RAP002', N'MV0009')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST009', CAST(N'2026-04-07' AS Date), CAST(N'12:50:00' AS Time), CAST(N'14:51:00' AS Time), CAST(N'2026-03-30' AS Date), CAST(N'2026-04-01' AS Date), N'NHÁP', N'P01', N'RAP002', N'MV0007')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST010', CAST(N'2026-04-02' AS Date), CAST(N'08:30:00' AS Time), CAST(N'10:57:00' AS Time), CAST(N'2026-03-30' AS Date), CAST(N'2026-03-31' AS Date), N'KẾT THÚC', N'P02', N'RAP002', N'MV0005')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST011', CAST(N'2026-04-04' AS Date), CAST(N'11:10:00' AS Time), CAST(N'14:14:00' AS Time), CAST(N'2026-03-30' AS Date), CAST(N'2026-04-01' AS Date), N'HOẠT ĐỘNG', N'P02', N'RAP002', N'MV0006')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST012', CAST(N'2026-04-07' AS Date), CAST(N'14:30:00' AS Time), CAST(N'16:16:00' AS Time), CAST(N'2026-03-30' AS Date), CAST(N'2026-04-02' AS Date), N'NHÁP', N'P02', N'RAP002', N'MV0010')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST013', CAST(N'2026-04-03' AS Date), CAST(N'08:00:00' AS Time), CAST(N'10:43:00' AS Time), CAST(N'2026-04-01' AS Date), CAST(N'2026-04-02' AS Date), N'KẾT THÚC', N'P01', N'RAP003', N'MV0008')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST014', CAST(N'2026-04-04' AS Date), CAST(N'10:50:00' AS Time), CAST(N'12:51:00' AS Time), CAST(N'2026-04-01' AS Date), CAST(N'2026-04-02' AS Date), N'HOẠT ĐỘNG', N'P01', N'RAP003', N'MV0007')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST015', CAST(N'2026-04-08' AS Date), CAST(N'13:00:00' AS Time), CAST(N'15:05:00' AS Time), CAST(N'2026-04-01' AS Date), CAST(N'2026-04-03' AS Date), N'NHÁP', N'P01', N'RAP003', N'MV0002')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST016', CAST(N'2026-04-03' AS Date), CAST(N'08:30:00' AS Time), CAST(N'10:16:00' AS Time), CAST(N'2026-04-01' AS Date), CAST(N'2026-04-02' AS Date), N'KẾT THÚC', N'P02', N'RAP003', N'MV0010')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST017', CAST(N'2026-04-04' AS Date), CAST(N'10:25:00' AS Time), CAST(N'12:23:00' AS Time), CAST(N'2026-04-01' AS Date), CAST(N'2026-04-03' AS Date), N'HOẠT ĐỘNG', N'P02', N'RAP003', N'MV0004')
+INSERT [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU], [NGÀY CHIẾU], [GIỜ BẮT ĐẦU], [GIỜ KẾT THÚC], [NGÀY TẠO], [NGÀY CẬP NHẬT], [TRẠNG THÁI], [MÃ PHÒNG], [MÃ SỐ RẠP], [MÃ PHIM]) VALUES (N'ST018', CAST(N'2026-04-08' AS Date), CAST(N'12:30:00' AS Time), CAST(N'15:46:00' AS Time), CAST(N'2026-04-01' AS Date), CAST(N'2026-04-04' AS Date), N'NHÁP', N'P02', N'RAP003', N'MV0001')
+GO
+INSERT [dbo].[STAFF] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT], [MÃ SỐ RẠP]) VALUES (N'E000002', NULL, N'RAP001')
+INSERT [dbo].[STAFF] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT], [MÃ SỐ RẠP]) VALUES (N'E000004', N'E000002', N'RAP001')
+INSERT [dbo].[STAFF] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT], [MÃ SỐ RẠP]) VALUES (N'E000005', N'E000002', N'RAP001')
+INSERT [dbo].[STAFF] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT], [MÃ SỐ RẠP]) VALUES (N'E000006', NULL, N'RAP002')
+INSERT [dbo].[STAFF] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT], [MÃ SỐ RẠP]) VALUES (N'E000008', N'E000006', N'RAP002')
+INSERT [dbo].[STAFF] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT], [MÃ SỐ RẠP]) VALUES (N'E000009', N'E000006', N'RAP002')
+INSERT [dbo].[STAFF] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT], [MÃ SỐ RẠP]) VALUES (N'E000010', NULL, N'RAP003')
+INSERT [dbo].[STAFF] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT], [MÃ SỐ RẠP]) VALUES (N'E000012', N'E000010', N'RAP003')
+INSERT [dbo].[STAFF] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT], [MÃ SỐ RẠP]) VALUES (N'E000013', N'E000010', N'RAP003')
+INSERT [dbo].[STAFF] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT], [MÃ SỐ RẠP]) VALUES (N'E000014', NULL, N'RAP004')
+INSERT [dbo].[STAFF] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT], [MÃ SỐ RẠP]) VALUES (N'E000015', N'E000014', N'RAP004')
+INSERT [dbo].[STAFF] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT], [MÃ SỐ RẠP]) VALUES (N'E000016', N'E000014', N'RAP004')
+INSERT [dbo].[STAFF] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT], [MÃ SỐ RẠP]) VALUES (N'E000018', NULL, N'RAP005')
+INSERT [dbo].[STAFF] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT], [MÃ SỐ RẠP]) VALUES (N'E000019', N'E000018', N'RAP005')
+INSERT [dbo].[STAFF] ([MÃ SỐ NHÂN VIÊN], [MÃ SỐ NGƯỜI GIÁM SÁT], [MÃ SỐ RẠP]) VALUES (N'E000020', N'E000018', N'RAP005')
+GO
+INSERT [dbo].[THỂ LOẠI] ([MÃ PHIM], [THỂ LOẠI]) VALUES (N'MV0001', N'Hành động')
+INSERT [dbo].[THỂ LOẠI] ([MÃ PHIM], [THỂ LOẠI]) VALUES (N'MV0001', N'Khoa học viễn tưởng')
+INSERT [dbo].[THỂ LOẠI] ([MÃ PHIM], [THỂ LOẠI]) VALUES (N'MV0002', N'Hoạt hình')
+INSERT [dbo].[THỂ LOẠI] ([MÃ PHIM], [THỂ LOẠI]) VALUES (N'MV0002', N'Phiêu lưu')
+INSERT [dbo].[THỂ LOẠI] ([MÃ PHIM], [THỂ LOẠI]) VALUES (N'MV0003', N'Kinh dị')
+INSERT [dbo].[THỂ LOẠI] ([MÃ PHIM], [THỂ LOẠI]) VALUES (N'MV0004', N'Gia đình')
+INSERT [dbo].[THỂ LOẠI] ([MÃ PHIM], [THỂ LOẠI]) VALUES (N'MV0004', N'Hoạt hình')
+INSERT [dbo].[THỂ LOẠI] ([MÃ PHIM], [THỂ LOẠI]) VALUES (N'MV0005', N'Tâm lý')
+INSERT [dbo].[THỂ LOẠI] ([MÃ PHIM], [THỂ LOẠI]) VALUES (N'MV0006', N'Hành động')
+INSERT [dbo].[THỂ LOẠI] ([MÃ PHIM], [THỂ LOẠI]) VALUES (N'MV0007', N'Lãng mạn')
+INSERT [dbo].[THỂ LOẠI] ([MÃ PHIM], [THỂ LOẠI]) VALUES (N'MV0008', N'Hành động')
+INSERT [dbo].[THỂ LOẠI] ([MÃ PHIM], [THỂ LOẠI]) VALUES (N'MV0009', N'Kinh dị')
+INSERT [dbo].[THỂ LOẠI] ([MÃ PHIM], [THỂ LOẠI]) VALUES (N'MV0010', N'Hài')
+GO
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00001', N'RAP001', N'P01', N'S01', N'ST001', N'SS00001', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00002', N'RAP001', N'P01', N'S02', N'ST001', N'SS00002', N'ĐÃ HẾT HẠN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00003', N'RAP001', N'P01', N'S03', N'ST001', N'SS00003', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00004', N'RAP001', N'P01', N'S04', N'ST001', N'SS00004', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00005', N'RAP001', N'P01', N'S05', N'ST001', N'SS00005', N'ĐÃ HẾT HẠN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00006', N'RAP001', N'P01', N'S06', N'ST001', N'SS00006', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00007', N'RAP001', N'P01', N'S01', N'ST002', N'SS00011', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00008', N'RAP001', N'P01', N'S03', N'ST002', N'SS00013', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00009', N'RAP001', N'P01', N'S07', N'ST002', N'SS00017', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00010', N'RAP001', N'P01', N'S10', N'ST002', N'SS00020', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00011', N'RAP001', N'P02', N'S01', N'ST004', N'SS00031', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00012', N'RAP001', N'P02', N'S02', N'ST004', N'SS00032', N'ĐÃ HẾT HẠN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00013', N'RAP001', N'P02', N'S03', N'ST004', N'SS00033', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00014', N'RAP001', N'P02', N'S04', N'ST004', N'SS00034', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00015', N'RAP001', N'P02', N'S05', N'ST004', N'SS00035', N'ĐÃ HẾT HẠN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00016', N'RAP001', N'P02', N'S06', N'ST004', N'SS00036', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00017', N'RAP001', N'P02', N'S03', N'ST005', N'SS00043', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00018', N'RAP001', N'P02', N'S05', N'ST005', N'SS00045', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00019', N'RAP001', N'P02', N'S07', N'ST005', N'SS00047', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00020', N'RAP001', N'P02', N'S10', N'ST005', N'SS00050', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00021', N'RAP002', N'P01', N'S01', N'ST007', N'SS00061', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00022', N'RAP002', N'P01', N'S02', N'ST007', N'SS00062', N'ĐÃ HẾT HẠN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00023', N'RAP002', N'P01', N'S03', N'ST007', N'SS00063', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00024', N'RAP002', N'P01', N'S04', N'ST007', N'SS00064', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00025', N'RAP002', N'P01', N'S05', N'ST007', N'SS00065', N'ĐÃ HẾT HẠN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00026', N'RAP002', N'P01', N'S06', N'ST007', N'SS00066', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00027', N'RAP002', N'P01', N'S01', N'ST008', N'SS00071', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00028', N'RAP002', N'P01', N'S03', N'ST008', N'SS00073', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00029', N'RAP002', N'P01', N'S04', N'ST008', N'SS00074', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00030', N'RAP002', N'P01', N'S06', N'ST008', N'SS00076', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00031', N'RAP002', N'P01', N'S07', N'ST008', N'SS00077', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00032', N'RAP002', N'P02', N'S01', N'ST010', N'SS00091', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00033', N'RAP002', N'P02', N'S02', N'ST010', N'SS00092', N'ĐÃ HẾT HẠN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00034', N'RAP002', N'P02', N'S03', N'ST010', N'SS00093', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00035', N'RAP002', N'P02', N'S04', N'ST010', N'SS00094', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00036', N'RAP002', N'P02', N'S05', N'ST010', N'SS00095', N'ĐÃ HẾT HẠN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00037', N'RAP002', N'P02', N'S06', N'ST010', N'SS00096', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00038', N'RAP002', N'P02', N'S03', N'ST011', N'SS00103', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00039', N'RAP002', N'P02', N'S04', N'ST011', N'SS00104', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00040', N'RAP002', N'P02', N'S05', N'ST011', N'SS00105', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00041', N'RAP002', N'P02', N'S07', N'ST011', N'SS00107', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00042', N'RAP002', N'P02', N'S10', N'ST011', N'SS00110', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00043', N'RAP003', N'P01', N'S01', N'ST013', N'SS00121', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00044', N'RAP003', N'P01', N'S02', N'ST013', N'SS00122', N'ĐÃ HẾT HẠN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00045', N'RAP003', N'P01', N'S03', N'ST013', N'SS00123', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00046', N'RAP003', N'P01', N'S04', N'ST013', N'SS00124', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00047', N'RAP003', N'P01', N'S05', N'ST013', N'SS00125', N'ĐÃ HẾT HẠN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00048', N'RAP003', N'P01', N'S06', N'ST013', N'SS00126', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00049', N'RAP003', N'P01', N'S02', N'ST014', N'SS00132', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00050', N'RAP003', N'P01', N'S03', N'ST014', N'SS00133', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00051', N'RAP003', N'P01', N'S04', N'ST014', N'SS00134', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00052', N'RAP003', N'P01', N'S10', N'ST014', N'SS00140', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00053', N'RAP003', N'P02', N'S01', N'ST016', N'SS00151', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00054', N'RAP003', N'P02', N'S02', N'ST016', N'SS00152', N'ĐÃ HẾT HẠN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00055', N'RAP003', N'P02', N'S03', N'ST016', N'SS00153', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00056', N'RAP003', N'P02', N'S04', N'ST016', N'SS00154', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00057', N'RAP003', N'P02', N'S05', N'ST016', N'SS00155', N'ĐÃ HẾT HẠN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00058', N'RAP003', N'P02', N'S06', N'ST016', N'SS00156', N'ĐÃ SỬ DỤNG')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00059', N'RAP003', N'P02', N'S03', N'ST017', N'SS00163', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00060', N'RAP003', N'P02', N'S04', N'ST017', N'SS00164', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00061', N'RAP003', N'P02', N'S07', N'ST017', N'SS00167', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00062', N'RAP003', N'P02', N'S08', N'ST017', N'SS00168', N'ĐÃ THANH TOÁN')
+INSERT [dbo].[TICKET_MOVIE] ([MÃ SẢN PHẨM], [MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME], [TRẠNG THÁI]) VALUES (N'TK00063', N'RAP003', N'P02', N'S10', N'ST017', N'SS00170', N'ĐÃ THANH TOÁN')
+GO
+INSERT [dbo].[TRANSACTION] ([MÃ THANH TOÁN], [PHƯƠNG THỨC], [SỐ TIỀN THỰC TẾ], [NGÀY TẠO], [TRẠNG THÁI], [MÃ ĐƠN HÀNG]) VALUES (N'T00001', N'MOMO', CAST(760000 AS Numeric(18, 0)), CAST(N'2026-03-01T10:00:00.000' AS DateTime), N'THÀNH CÔNG', N'O00001')
+INSERT [dbo].[TRANSACTION] ([MÃ THANH TOÁN], [PHƯƠNG THỨC], [SỐ TIỀN THỰC TẾ], [NGÀY TẠO], [TRẠNG THÁI], [MÃ ĐƠN HÀNG]) VALUES (N'T00002', N'BANKING', CAST(545000 AS Numeric(18, 0)), CAST(N'2026-03-02T09:00:00.000' AS DateTime), N'THẤT BẠI', N'O00002')
+INSERT [dbo].[TRANSACTION] ([MÃ THANH TOÁN], [PHƯƠNG THỨC], [SỐ TIỀN THỰC TẾ], [NGÀY TẠO], [TRẠNG THÁI], [MÃ ĐƠN HÀNG]) VALUES (N'T00003', N'BANKING', CAST(545000 AS Numeric(18, 0)), CAST(N'2026-03-02T09:05:00.000' AS DateTime), N'THÀNH CÔNG', N'O00002')
+INSERT [dbo].[TRANSACTION] ([MÃ THANH TOÁN], [PHƯƠNG THỨC], [SỐ TIỀN THỰC TẾ], [NGÀY TẠO], [TRẠNG THÁI], [MÃ ĐƠN HÀNG]) VALUES (N'T00004', N'CREDIT_CARD', CAST(2200000 AS Numeric(18, 0)), CAST(N'2026-03-03T10:00:00.000' AS DateTime), N'ĐANG CHỜ', N'O00003')
+INSERT [dbo].[TRANSACTION] ([MÃ THANH TOÁN], [PHƯƠNG THỨC], [SỐ TIỀN THỰC TẾ], [NGÀY TẠO], [TRẠNG THÁI], [MÃ ĐƠN HÀNG]) VALUES (N'T00005', N'MOMO', CAST(1425000 AS Numeric(18, 0)), CAST(N'2026-03-04T10:00:00.000' AS DateTime), N'THẤT BẠI', N'O00004')
+INSERT [dbo].[TRANSACTION] ([MÃ THANH TOÁN], [PHƯƠNG THỨC], [SỐ TIỀN THỰC TẾ], [NGÀY TẠO], [TRẠNG THÁI], [MÃ ĐƠN HÀNG]) VALUES (N'T00006', N'BANKING', CAST(1790000 AS Numeric(18, 0)), CAST(N'2026-03-05T10:00:00.000' AS DateTime), N'THÀNH CÔNG', N'O00005')
+INSERT [dbo].[TRANSACTION] ([MÃ THANH TOÁN], [PHƯƠNG THỨC], [SỐ TIỀN THỰC TẾ], [NGÀY TẠO], [TRẠNG THÁI], [MÃ ĐƠN HÀNG]) VALUES (N'T00007', N'CREDIT_CARD', CAST(1535000 AS Numeric(18, 0)), CAST(N'2026-03-06T10:00:00.000' AS DateTime), N'ĐANG CHỜ', N'O00006')
+INSERT [dbo].[TRANSACTION] ([MÃ THANH TOÁN], [PHƯƠNG THỨC], [SỐ TIỀN THỰC TẾ], [NGÀY TẠO], [TRẠNG THÁI], [MÃ ĐƠN HÀNG]) VALUES (N'T00008', N'MOMO', CAST(1640000 AS Numeric(18, 0)), CAST(N'2026-03-07T10:00:00.000' AS DateTime), N'THÀNH CÔNG', N'O00007')
+INSERT [dbo].[TRANSACTION] ([MÃ THANH TOÁN], [PHƯƠNG THỨC], [SỐ TIỀN THỰC TẾ], [NGÀY TẠO], [TRẠNG THÁI], [MÃ ĐƠN HÀNG]) VALUES (N'T00009', N'BANKING', CAST(1320000 AS Numeric(18, 0)), CAST(N'2026-03-08T10:00:00.000' AS DateTime), N'THẤT BẠI', N'O00008')
+INSERT [dbo].[TRANSACTION] ([MÃ THANH TOÁN], [PHƯƠNG THỨC], [SỐ TIỀN THỰC TẾ], [NGÀY TẠO], [TRẠNG THÁI], [MÃ ĐƠN HÀNG]) VALUES (N'T00010', N'CREDIT_CARD', CAST(950000 AS Numeric(18, 0)), CAST(N'2026-03-09T10:00:00.000' AS DateTime), N'THÀNH CÔNG', N'O00009')
+INSERT [dbo].[TRANSACTION] ([MÃ THANH TOÁN], [PHƯƠNG THỨC], [SỐ TIỀN THỰC TẾ], [NGÀY TẠO], [TRẠNG THÁI], [MÃ ĐƠN HÀNG]) VALUES (N'T00011', N'MOMO', CAST(770000 AS Numeric(18, 0)), CAST(N'2026-03-10T10:00:00.000' AS DateTime), N'ĐANG CHỜ', N'O00010')
+INSERT [dbo].[TRANSACTION] ([MÃ THANH TOÁN], [PHƯƠNG THỨC], [SỐ TIỀN THỰC TẾ], [NGÀY TẠO], [TRẠNG THÁI], [MÃ ĐƠN HÀNG]) VALUES (N'T00012', N'BANKING', CAST(1450000 AS Numeric(18, 0)), CAST(N'2026-03-11T09:00:00.000' AS DateTime), N'THẤT BẠI', N'O00011')
+INSERT [dbo].[TRANSACTION] ([MÃ THANH TOÁN], [PHƯƠNG THỨC], [SỐ TIỀN THỰC TẾ], [NGÀY TẠO], [TRẠNG THÁI], [MÃ ĐƠN HÀNG]) VALUES (N'T00013', N'BANKING', CAST(1450000 AS Numeric(18, 0)), CAST(N'2026-03-11T09:03:00.000' AS DateTime), N'THÀNH CÔNG', N'O00011')
+INSERT [dbo].[TRANSACTION] ([MÃ THANH TOÁN], [PHƯƠNG THỨC], [SỐ TIỀN THỰC TẾ], [NGÀY TẠO], [TRẠNG THÁI], [MÃ ĐƠN HÀNG]) VALUES (N'T00014', N'CREDIT_CARD', CAST(1300000 AS Numeric(18, 0)), CAST(N'2026-03-12T10:00:00.000' AS DateTime), N'THẤT BẠI', N'O00012')
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_CUSTOMER]    Script Date: 05/04/2026 10:56:12 AM ******/
+ALTER TABLE [dbo].[CUSTOMER] ADD  CONSTRAINT [IX_CUSTOMER] UNIQUE NONCLUSTERED 
+(
+	[SỐ ĐIỆN THOẠI] ASC,
+	[EMAIL] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_EMPLOYEE]    Script Date: 05/04/2026 10:56:12 AM ******/
+ALTER TABLE [dbo].[EMPLOYEE] ADD  CONSTRAINT [IX_EMPLOYEE] UNIQUE NONCLUSTERED 
+(
+	[EMAIL] ASC,
+	[CCCD] ASC,
+	[SỐ ĐIỆN THOẠI] ASC,
+	[USERNAME] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_PROMOTION]    Script Date: 05/04/2026 10:56:12 AM ******/
+ALTER TABLE [dbo].[PROMOTION] ADD  CONSTRAINT [IX_PROMOTION] UNIQUE NONCLUSTERED 
+(
+	[PROMOTION_CODE] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+ALTER TABLE [dbo].[ADMIN]  WITH NOCHECK ADD  CONSTRAINT [FK_ADMIN_ADMIN] FOREIGN KEY([MÃ SỐ NGƯỜI GIÁM SÁT])
+REFERENCES [dbo].[ADMIN] ([MÃ SỐ NHÂN VIÊN])
+GO
+ALTER TABLE [dbo].[ADMIN] CHECK CONSTRAINT [FK_ADMIN_ADMIN]
+GO
+ALTER TABLE [dbo].[ADMIN]  WITH NOCHECK ADD  CONSTRAINT [FK_ADMIN_EMPLOYEE] FOREIGN KEY([MÃ SỐ NHÂN VIÊN])
+REFERENCES [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN])
+GO
+ALTER TABLE [dbo].[ADMIN] CHECK CONSTRAINT [FK_ADMIN_EMPLOYEE]
+GO
+ALTER TABLE [dbo].[BẰNG CẤP]  WITH NOCHECK ADD  CONSTRAINT [FK_BẰNG CẤP_EMPLOYEE] FOREIGN KEY([MÃ SỐ NHÂN VIÊN])
+REFERENCES [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[BẰNG CẤP] CHECK CONSTRAINT [FK_BẰNG CẤP_EMPLOYEE]
+GO
+ALTER TABLE [dbo].[CINEMA]  WITH NOCHECK ADD  CONSTRAINT [FK_CINEMA_EMPLOYEE] FOREIGN KEY([MÃ SỐ NHÂN VIÊN])
+REFERENCES [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN])
+GO
+ALTER TABLE [dbo].[CINEMA] CHECK CONSTRAINT [FK_CINEMA_EMPLOYEE]
+GO
+ALTER TABLE [dbo].[CUSTOMER]  WITH NOCHECK ADD  CONSTRAINT [FK_CUSTOMER_MEMBERSHIP_LEVEL] FOREIGN KEY([MÃ HẠNG THÀNH VIÊN])
+REFERENCES [dbo].[MEMBERSHIP_LEVEL] ([MÃ HẠNG THÀNH VIÊN])
+GO
+ALTER TABLE [dbo].[CUSTOMER] CHECK CONSTRAINT [FK_CUSTOMER_MEMBERSHIP_LEVEL]
+GO
+ALTER TABLE [dbo].[DIỄN VIÊN]  WITH NOCHECK ADD  CONSTRAINT [FK_DIỄN VIÊN_MOVIE] FOREIGN KEY([MÃ PHIM])
+REFERENCES [dbo].[MOVIE] ([MÃ PHIM])
+GO
+ALTER TABLE [dbo].[DIỄN VIÊN] CHECK CONSTRAINT [FK_DIỄN VIÊN_MOVIE]
+GO
+ALTER TABLE [dbo].[FNB]  WITH NOCHECK ADD  CONSTRAINT [FK_FNB_PRODUCT] FOREIGN KEY([MÃ SẢN PHẨM])
+REFERENCES [dbo].[PRODUCT] ([MÃ SẢN PHẨM])
+GO
+ALTER TABLE [dbo].[FNB] CHECK CONSTRAINT [FK_FNB_PRODUCT]
+GO
+ALTER TABLE [dbo].[HƯỞNG]  WITH NOCHECK ADD  CONSTRAINT [FK_HƯỞNG_MEMBERSHIP_LEVEL] FOREIGN KEY([MÃ HẠNG THÀNH VIÊN])
+REFERENCES [dbo].[MEMBERSHIP_LEVEL] ([MÃ HẠNG THÀNH VIÊN])
+GO
+ALTER TABLE [dbo].[HƯỞNG] CHECK CONSTRAINT [FK_HƯỞNG_MEMBERSHIP_LEVEL]
+GO
+ALTER TABLE [dbo].[HƯỞNG]  WITH NOCHECK ADD  CONSTRAINT [FK_HƯỞNG_PROMOTION] FOREIGN KEY([MÃ KHUYẾN MÃI])
+REFERENCES [dbo].[PROMOTION] ([MÃ KHUYẾN MÃI])
+GO
+ALTER TABLE [dbo].[HƯỞNG] CHECK CONSTRAINT [FK_HƯỞNG_PROMOTION]
+GO
+ALTER TABLE [dbo].[LỒNG TIẾNG]  WITH NOCHECK ADD  CONSTRAINT [FK_LỒNG TIẾNG_MOVIE] FOREIGN KEY([MÃ PHIM])
+REFERENCES [dbo].[MOVIE] ([MÃ PHIM])
+GO
+ALTER TABLE [dbo].[LỒNG TIẾNG] CHECK CONSTRAINT [FK_LỒNG TIẾNG_MOVIE]
+GO
+ALTER TABLE [dbo].[ORDER]  WITH NOCHECK ADD  CONSTRAINT [FK_ORDER_CUSTOMER] FOREIGN KEY([MÃ SỐ KHÁCH HÀNG])
+REFERENCES [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG])
+GO
+ALTER TABLE [dbo].[ORDER] CHECK CONSTRAINT [FK_ORDER_CUSTOMER]
+GO
+/*
+HONG HỈU CHỖ NÀY, SAO CHO RÀNG BUỘC TỰ THAM CHIẾU?
+ALTER TABLE [dbo].[ORDER]  WITH CHECK ADD  CONSTRAINT [FK_ORDER_ORDER] FOREIGN KEY([MÃ ĐƠN HÀNG])
+REFERENCES [dbo].[ORDER] ([MÃ ĐƠN HÀNG])
+GO
+ALTER TABLE [dbo].[ORDER] CHECK CONSTRAINT [FK_ORDER_ORDER]*/
+GO
+ALTER TABLE [dbo].[ORDER]  WITH CHECK ADD  CONSTRAINT [FK_ORDER_PROMOTION] FOREIGN KEY([MÃ KHUYẾN MÃI])
+REFERENCES [dbo].[PROMOTION] ([MÃ KHUYẾN MÃI])
+GO
+ALTER TABLE [dbo].[ORDER] CHECK CONSTRAINT [FK_ORDER_PROMOTION]
+GO
+ALTER TABLE [dbo].[ORDER_DETAIL]  WITH NOCHECK ADD  CONSTRAINT [FK_ORDER_DETAIL_ORDER] FOREIGN KEY([MÃ ĐƠN HÀNG])
+REFERENCES [dbo].[ORDER] ([MÃ ĐƠN HÀNG])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[ORDER_DETAIL] CHECK CONSTRAINT [FK_ORDER_DETAIL_ORDER]
+GO
+ALTER TABLE [dbo].[ORDER_DETAIL]  WITH NOCHECK ADD  CONSTRAINT [FK_ORDER_DETAIL_PRODUCT] FOREIGN KEY([MÃ SẢN PHẨM])
+REFERENCES [dbo].[PRODUCT] ([MÃ SẢN PHẨM])
+GO
+ALTER TABLE [dbo].[ORDER_DETAIL] CHECK CONSTRAINT [FK_ORDER_DETAIL_PRODUCT]
+GO
+ALTER TABLE [dbo].[PHỤ ĐỀ]  WITH NOCHECK ADD  CONSTRAINT [FK_PHỤ ĐỀ_MOVIE] FOREIGN KEY([MÃ PHIM])
+REFERENCES [dbo].[MOVIE] ([MÃ PHIM])
+GO
+ALTER TABLE [dbo].[PHỤ ĐỀ] CHECK CONSTRAINT [FK_PHỤ ĐỀ_MOVIE]
+GO
+ALTER TABLE [dbo].[PRICE]  WITH CHECK ADD  CONSTRAINT [FK_PRICE_ROOM_TYPE] FOREIGN KEY([LOẠI PHÒNG])
+REFERENCES [dbo].[ROOM_TYPE] ([LOẠI PHÒNG])
+GO
+ALTER TABLE [dbo].[PRICE] CHECK CONSTRAINT [FK_PRICE_ROOM_TYPE]
+GO
+ALTER TABLE [dbo].[PRICE]  WITH CHECK ADD  CONSTRAINT [FK_PRICE_SEAT_TYPE] FOREIGN KEY([LOẠI GHẾ])
+REFERENCES [dbo].[SEAT_TYPE] ([LOẠI GHẾ])
+GO
+ALTER TABLE [dbo].[PRICE] CHECK CONSTRAINT [FK_PRICE_SEAT_TYPE]
+GO
+ALTER TABLE [dbo].[RATING]  WITH NOCHECK ADD  CONSTRAINT [FK_RATING_CUSTOMER] FOREIGN KEY([MÃ SỐ KHÁCH HÀNG])
+REFERENCES [dbo].[CUSTOMER] ([MÃ SỐ KHÁCH HÀNG])
+GO
+ALTER TABLE [dbo].[RATING] CHECK CONSTRAINT [FK_RATING_CUSTOMER]
+GO
+ALTER TABLE [dbo].[RATING]  WITH NOCHECK ADD  CONSTRAINT [FK_RATING_MOVIE] FOREIGN KEY([MÃ PHIM])
+REFERENCES [dbo].[MOVIE] ([MÃ PHIM])
+GO
+ALTER TABLE [dbo].[RATING] CHECK CONSTRAINT [FK_RATING_MOVIE]
+GO
+ALTER TABLE [dbo].[ROOM]  WITH NOCHECK ADD  CONSTRAINT [FK_ROOM_CINEMA] FOREIGN KEY([MÃ SỐ RẠP])
+REFERENCES [dbo].[CINEMA] ([MÃ SỐ RẠP])
+GO
+ALTER TABLE [dbo].[ROOM] CHECK CONSTRAINT [FK_ROOM_CINEMA]
+GO
+ALTER TABLE [dbo].[ROOM]  WITH CHECK ADD  CONSTRAINT [FK_ROOM_ROOM_TYPE] FOREIGN KEY([LOẠI PHÒNG])
+REFERENCES [dbo].[ROOM_TYPE] ([LOẠI PHÒNG])
+GO
+ALTER TABLE [dbo].[ROOM] CHECK CONSTRAINT [FK_ROOM_ROOM_TYPE]
+GO
+ALTER TABLE [dbo].[SEAT]  WITH NOCHECK ADD  CONSTRAINT [FK_SEAT_ROOM] FOREIGN KEY([MÃ SỐ RẠP], [MÃ PHÒNG])
+REFERENCES [dbo].[ROOM] ([MÃ SỐ RẠP], [MÃ PHÒNG])
+GO
+ALTER TABLE [dbo].[SEAT] CHECK CONSTRAINT [FK_SEAT_ROOM]
+GO
+ALTER TABLE [dbo].[SEAT]  WITH CHECK ADD  CONSTRAINT [FK_SEAT_SEAT_TYPE] FOREIGN KEY([LOẠI GHẾ])
+REFERENCES [dbo].[SEAT_TYPE] ([LOẠI GHẾ])
+GO
+ALTER TABLE [dbo].[SEAT] CHECK CONSTRAINT [FK_SEAT_SEAT_TYPE]
+GO
+ALTER TABLE [dbo].[SEAT_SHOWTIME]  WITH NOCHECK ADD  CONSTRAINT [FK_SEAT_SHOWTIME_SEAT] FOREIGN KEY([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ])
+REFERENCES [dbo].[SEAT] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ])
+GO
+ALTER TABLE [dbo].[SEAT_SHOWTIME] CHECK CONSTRAINT [FK_SEAT_SHOWTIME_SEAT]
+GO
+ALTER TABLE [dbo].[SEAT_SHOWTIME]  WITH NOCHECK ADD  CONSTRAINT [FK_SEAT_SHOWTIME_SHOWTIME] FOREIGN KEY([MÃ SỐ SUẤT CHIẾU])
+REFERENCES [dbo].[SHOWTIME] ([MÃ SỐ SUẤT CHIẾU])
+GO
+ALTER TABLE [dbo].[SEAT_SHOWTIME] CHECK CONSTRAINT [FK_SEAT_SHOWTIME_SHOWTIME]
+GO
+ALTER TABLE [dbo].[SHOWTIME]  WITH NOCHECK ADD  CONSTRAINT [FK_SHOWTIME_MOVIE] FOREIGN KEY([MÃ PHIM])
+REFERENCES [dbo].[MOVIE] ([MÃ PHIM])
+GO
+ALTER TABLE [dbo].[SHOWTIME] CHECK CONSTRAINT [FK_SHOWTIME_MOVIE]
+GO
+ALTER TABLE [dbo].[SHOWTIME]  WITH NOCHECK ADD  CONSTRAINT [FK_SHOWTIME_ROOM] FOREIGN KEY([MÃ SỐ RẠP], [MÃ PHÒNG])
+REFERENCES [dbo].[ROOM] ([MÃ SỐ RẠP], [MÃ PHÒNG])
+GO
+ALTER TABLE [dbo].[SHOWTIME] CHECK CONSTRAINT [FK_SHOWTIME_ROOM]
+GO
+ALTER TABLE [dbo].[STAFF]  WITH CHECK ADD  CONSTRAINT [FK_STAFF_CINEMA] FOREIGN KEY([MÃ SỐ RẠP])
+REFERENCES [dbo].[CINEMA] ([MÃ SỐ RẠP])
+GO
+ALTER TABLE [dbo].[STAFF] CHECK CONSTRAINT [FK_STAFF_CINEMA]
+GO
+ALTER TABLE [dbo].[STAFF]  WITH CHECK ADD  CONSTRAINT [FK_STAFF_EMPLOYEE] FOREIGN KEY([MÃ SỐ NHÂN VIÊN])
+REFERENCES [dbo].[EMPLOYEE] ([MÃ SỐ NHÂN VIÊN])
+GO
+ALTER TABLE [dbo].[STAFF] CHECK CONSTRAINT [FK_STAFF_EMPLOYEE]
+GO
+ALTER TABLE [dbo].[STAFF]  WITH CHECK ADD  CONSTRAINT [FK_STAFF_STAFF1] FOREIGN KEY([MÃ SỐ NGƯỜI GIÁM SÁT])
+REFERENCES [dbo].[STAFF] ([MÃ SỐ NHÂN VIÊN])
+GO
+ALTER TABLE [dbo].[STAFF] CHECK CONSTRAINT [FK_STAFF_STAFF1]
+GO
+ALTER TABLE [dbo].[THỂ LOẠI]  WITH NOCHECK ADD  CONSTRAINT [FK_THỂ LOẠI_MOVIE] FOREIGN KEY([MÃ PHIM])
+REFERENCES [dbo].[MOVIE] ([MÃ PHIM])
+GO
+ALTER TABLE [dbo].[THỂ LOẠI] CHECK CONSTRAINT [FK_THỂ LOẠI_MOVIE]
+GO
+ALTER TABLE [dbo].[TICKET_MOVIE]  WITH NOCHECK ADD  CONSTRAINT [FK_TICKET_MOVIE_PRODUCT] FOREIGN KEY([MÃ SẢN PHẨM])
+REFERENCES [dbo].[PRODUCT] ([MÃ SẢN PHẨM])
+GO
+ALTER TABLE [dbo].[TICKET_MOVIE] CHECK CONSTRAINT [FK_TICKET_MOVIE_PRODUCT]
+GO
+ALTER TABLE [dbo].[TICKET_MOVIE]  WITH NOCHECK ADD  CONSTRAINT [FK_TICKET_MOVIE_SEAT_SHOWTIME] FOREIGN KEY([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME])
+REFERENCES [dbo].[SEAT_SHOWTIME] ([MÃ SỐ RẠP], [MÃ PHÒNG], [MÃ SỐ GHẾ], [MÃ SỐ SUẤT CHIẾU], [MÃ SEAT_SHOWTIME])
+GO
+ALTER TABLE [dbo].[TICKET_MOVIE] CHECK CONSTRAINT [FK_TICKET_MOVIE_SEAT_SHOWTIME]
+GO
+ALTER TABLE [dbo].[TRANSACTION]  WITH NOCHECK ADD  CONSTRAINT [FK_TRANSACTION_ORDER] FOREIGN KEY([MÃ ĐƠN HÀNG])
+REFERENCES [dbo].[ORDER] ([MÃ ĐƠN HÀNG])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[TRANSACTION] CHECK CONSTRAINT [FK_TRANSACTION_ORDER]
+GO
+ALTER TABLE [dbo].[CINEMA]  WITH NOCHECK ADD  CONSTRAINT [CK_CINEMA] CHECK  (([TRẠNG THÁI]=N'ĐÓNG' OR [TRẠNG THÁI]=N'BẢO TRÌ' OR [TRẠNG THÁI]=N'HOẠT ĐỘNG'))
+GO
+ALTER TABLE [dbo].[CINEMA] CHECK CONSTRAINT [CK_CINEMA]
+GO
+ALTER TABLE [dbo].[CUSTOMER]  WITH NOCHECK ADD  CONSTRAINT [CK_CUSTOMER] CHECK  (([GIỚI TÍNH]=N'Nữ' OR [GIỚI TÍNH]='Nam'))
+GO
+ALTER TABLE [dbo].[CUSTOMER] CHECK CONSTRAINT [CK_CUSTOMER]
+GO
+ALTER TABLE [dbo].[CUSTOMER]  WITH NOCHECK ADD  CONSTRAINT [CK_CUSTOMER_1] CHECK  (([SỐ ĐIỆN THOẠI] like '0[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'))
+GO
+ALTER TABLE [dbo].[CUSTOMER] CHECK CONSTRAINT [CK_CUSTOMER_1]
+GO
+ALTER TABLE [dbo].[CUSTOMER]  WITH NOCHECK ADD  CONSTRAINT [CK_CUSTOMER_2] CHECK  (([PASSWORD] like '%[A-Z]%' AND [PASSWORD] like '%[a-z]%' AND [PASSWORD] like '%[0-9]%' AND len([PASSWORD])>=(8)))
+GO
+ALTER TABLE [dbo].[CUSTOMER] CHECK CONSTRAINT [CK_CUSTOMER_2]
+GO
+ALTER TABLE [dbo].[CUSTOMER]  WITH NOCHECK ADD  CONSTRAINT [CK_CUSTOMER_3] CHECK  (([EMAIL] like '%_@_%._%'))
+GO
+ALTER TABLE [dbo].[CUSTOMER] CHECK CONSTRAINT [CK_CUSTOMER_3]
+GO
+ALTER TABLE [dbo].[CUSTOMER]  WITH NOCHECK ADD  CONSTRAINT [CK_CUSTOMER_4] CHECK  (([NGÀY SINH]<=dateadd(year,(-13),getdate())))
+GO
+ALTER TABLE [dbo].[CUSTOMER] CHECK CONSTRAINT [CK_CUSTOMER_4]
+GO
+ALTER TABLE [dbo].[EMPLOYEE]  WITH NOCHECK ADD  CONSTRAINT [CK_EMPLOYEE] CHECK  (([EMAIL] like '%_@_%._%'))
+GO
+ALTER TABLE [dbo].[EMPLOYEE] CHECK CONSTRAINT [CK_EMPLOYEE]
+GO
+ALTER TABLE [dbo].[EMPLOYEE]  WITH NOCHECK ADD  CONSTRAINT [CK_EMPLOYEE_1] CHECK  (([GIỚI TÍNH]=N'Nữ' OR [GIỚI TÍNH]='Nam'))
+GO
+ALTER TABLE [dbo].[EMPLOYEE] CHECK CONSTRAINT [CK_EMPLOYEE_1]
+GO
+ALTER TABLE [dbo].[EMPLOYEE]  WITH NOCHECK ADD  CONSTRAINT [CK_EMPLOYEE_2] CHECK  (([SỐ ĐIỆN THOẠI] like '0[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'))
+GO
+ALTER TABLE [dbo].[EMPLOYEE] CHECK CONSTRAINT [CK_EMPLOYEE_2]
+GO
+ALTER TABLE [dbo].[EMPLOYEE]  WITH NOCHECK ADD  CONSTRAINT [CK_EMPLOYEE_3] CHECK  (([PASSWORD] like '%[A-Z]%' AND [PASSWORD] like '%[a-z]%' AND [PASSWORD] like '%[0-9]%' AND len([PASSWORD])>=(8)))
+GO
+ALTER TABLE [dbo].[EMPLOYEE] CHECK CONSTRAINT [CK_EMPLOYEE_3]
+GO
+ALTER TABLE [dbo].[EMPLOYEE]  WITH NOCHECK ADD  CONSTRAINT [CK_EMPLOYEE_4] CHECK  (([TRẠNG THÁI]=N'LÀM VIỆC LẠI' OR [TRẠNG THÁI]=N'ĐÃ NGHỈ' OR [TRẠNG THÁI]=N'ĐANG LÀM'))
+GO
+ALTER TABLE [dbo].[EMPLOYEE] CHECK CONSTRAINT [CK_EMPLOYEE_4]
+GO
+ALTER TABLE [dbo].[EMPLOYEE]  WITH NOCHECK ADD  CONSTRAINT [CK_EMPLOYEE_5] CHECK  (([LOẠI NHÂN VIÊN]=N'NHÂN VIÊN THỜI VỤ' OR [LOẠI NHÂN VIÊN]=N'NHÂN VIÊN CHÍNH THỨC'))
+GO
+ALTER TABLE [dbo].[EMPLOYEE] CHECK CONSTRAINT [CK_EMPLOYEE_5]
+GO
+ALTER TABLE [dbo].[FNB]  WITH NOCHECK ADD  CONSTRAINT [CK_FNB] CHECK  (([GIÁ CẢ]>=(0)))
+GO
+ALTER TABLE [dbo].[FNB] CHECK CONSTRAINT [CK_FNB]
+GO
+ALTER TABLE [dbo].[FNB]  WITH NOCHECK ADD  CONSTRAINT [CK_FNB_1] CHECK  (([KÍCH THƯỚC]='S' OR [KÍCH THƯỚC]='M' OR [KÍCH THƯỚC]='L'))
+GO
+ALTER TABLE [dbo].[FNB] CHECK CONSTRAINT [CK_FNB_1]
+GO
+ALTER TABLE [dbo].[FNB]  WITH NOCHECK ADD  CONSTRAINT [CK_FNB_2] CHECK  (([TRẠNG THÁI]=N'NGỪNG BÁN' OR [TRẠNG THÁI]=N'ĐANG BÁN'))
+GO
+ALTER TABLE [dbo].[FNB] CHECK CONSTRAINT [CK_FNB_2]
+GO
+ALTER TABLE [dbo].[MEMBERSHIP_LEVEL]  WITH NOCHECK ADD  CONSTRAINT [CK_MEMBERSHIP_LEVEL] CHECK  (([TÊN HẠNG]=N'VVIP' OR [TÊN HẠNG]=N'VIP' OR [TÊN HẠNG]=N'MEMBER'))
+GO
+ALTER TABLE [dbo].[MEMBERSHIP_LEVEL] CHECK CONSTRAINT [CK_MEMBERSHIP_LEVEL]
+GO
+ALTER TABLE [dbo].[MOVIE]  WITH NOCHECK ADD  CONSTRAINT [CK_MOVIE] CHECK  (([GIỚI HẠN ĐỘ TUỔI]='T18' OR [GIỚI HẠN ĐỘ TUỔI]='T16' OR [GIỚI HẠN ĐỘ TUỔI]='T13' OR [GIỚI HẠN ĐỘ TUỔI]='K' OR [GIỚI HẠN ĐỘ TUỔI]='P'))
+GO
+ALTER TABLE [dbo].[MOVIE] CHECK CONSTRAINT [CK_MOVIE]
+GO
+ALTER TABLE [dbo].[ORDER]  WITH NOCHECK ADD  CONSTRAINT [CK_ORDER] CHECK  (([TỔNG TIỀN]>=(0)))
+GO
+ALTER TABLE [dbo].[ORDER] CHECK CONSTRAINT [CK_ORDER]
+GO
+ALTER TABLE [dbo].[ORDER]  WITH NOCHECK ADD  CONSTRAINT [CK_ORDER_1] CHECK  (([SỐ TIỀN GIẢM]>=(0)))
+GO
+ALTER TABLE [dbo].[ORDER] CHECK CONSTRAINT [CK_ORDER_1]
+GO
+ALTER TABLE [dbo].[ORDER]  WITH NOCHECK ADD  CONSTRAINT [CK_ORDER_2] CHECK  (([TRẠNG THÁI]=N'ĐÃ THANH TOÁN' OR [TRẠNG THÁI]=N'ĐÃ HỦY' OR [TRẠNG THÁI]=N'ĐANG CHỜ'))
+GO
+ALTER TABLE [dbo].[ORDER] CHECK CONSTRAINT [CK_ORDER_2]
+GO
+ALTER TABLE [dbo].[PROMOTION]  WITH NOCHECK ADD  CONSTRAINT [CK_PROMOTION] CHECK  (([TRẠNG THÁI]=N'HẾT HẠN' OR [TRẠNG THÁI]=N'TẠM DỪNG' OR [TRẠNG THÁI]=N'HOẠT ĐỘNG' OR [TRẠNG THÁI]=N'NHÁP'))
+GO
+ALTER TABLE [dbo].[PROMOTION] CHECK CONSTRAINT [CK_PROMOTION]
+GO
+ALTER TABLE [dbo].[PROMOTION]  WITH NOCHECK ADD  CONSTRAINT [CK_PROMOTION_1] CHECK  (([LOẠI KHUYẾN MÃI]=N'GIÁ TRỊ' OR [LOẠI KHUYẾN MÃI]=N'PHẦN TRĂM'))
+GO
+ALTER TABLE [dbo].[PROMOTION] CHECK CONSTRAINT [CK_PROMOTION_1]
+GO
+ALTER TABLE [dbo].[RATING]  WITH NOCHECK ADD  CONSTRAINT [CK_RATING] CHECK  (([ĐIỂM RATING]>=(1) AND [ĐIỂM RATING]<=(5)))
+GO
+ALTER TABLE [dbo].[RATING] CHECK CONSTRAINT [CK_RATING]
+GO
+ALTER TABLE [dbo].[ROOM]  WITH NOCHECK ADD  CONSTRAINT [CK_ROOM_1] CHECK  (([TRẠNG THÁI]=N'ĐÓNG' OR [TRẠNG THÁI]=N'BẢO TRÌ' OR [TRẠNG THÁI]=N'HOẠT ĐỘNG'))
+GO
+ALTER TABLE [dbo].[ROOM] CHECK CONSTRAINT [CK_ROOM_1]
+GO
+ALTER TABLE [dbo].[SEAT_SHOWTIME]  WITH NOCHECK ADD  CONSTRAINT [CK_SEAT_SHOWTIME] CHECK  (([TRẠNG THÁI GHẾ]=N'KHÔNG THỂ CHỌN' OR [TRẠNG THÁI GHẾ]=N'ĐÃ CHỌN' OR [TRẠNG THÁI GHẾ]=N'CHƯA CHỌN'))
+GO
+ALTER TABLE [dbo].[SEAT_SHOWTIME] CHECK CONSTRAINT [CK_SEAT_SHOWTIME]
+GO
+ALTER TABLE [dbo].[SHOWTIME]  WITH NOCHECK ADD  CONSTRAINT [CK_SHOWTIME] CHECK  (([GIỜ BẮT ĐẦU]<[GIỜ KẾT THÚC] AND [NGÀY CHIẾU]>[NGÀY TẠO]))
+GO
+ALTER TABLE [dbo].[SHOWTIME] CHECK CONSTRAINT [CK_SHOWTIME]
+GO
+ALTER TABLE [dbo].[SHOWTIME]  WITH NOCHECK ADD  CONSTRAINT [CK_SHOWTIME_1] CHECK  (([TRẠNG THÁI]=N'NHÁP' OR [TRẠNG THÁI]=N'KẾT THÚC' OR [TRẠNG THÁI]=N'HOẠT ĐỘNG'))
+GO
+ALTER TABLE [dbo].[SHOWTIME] CHECK CONSTRAINT [CK_SHOWTIME_1]
+GO
+ALTER TABLE [dbo].[TICKET_MOVIE]  WITH CHECK ADD  CONSTRAINT [CK_TICKET_MOVIE] CHECK  (([TRẠNG THÁI]=N'ĐÃ HẾT HẠN' OR [TRẠNG THÁI]=N'ĐÃ HỦY' OR [TRẠNG THÁI]=N'ĐÃ SỬ DỤNG' OR [TRẠNG THÁI]=N'ĐÃ THANH TOÁN'))
+GO
+ALTER TABLE [dbo].[TICKET_MOVIE] CHECK CONSTRAINT [CK_TICKET_MOVIE]
+GO
+ALTER TABLE [dbo].[TRANSACTION]  WITH NOCHECK ADD  CONSTRAINT [CK_TRANSACTION] CHECK  (([SỐ TIỀN THỰC TẾ]>=(0)))
+GO
+ALTER TABLE [dbo].[TRANSACTION] CHECK CONSTRAINT [CK_TRANSACTION]
+GO
+ALTER TABLE [dbo].[TRANSACTION]  WITH NOCHECK ADD  CONSTRAINT [CK_TRANSACTION_1] CHECK  (([TRẠNG THÁI]=N'THẤT BẠI' OR [TRẠNG THÁI]=N'THÀNH CÔNG' OR [TRẠNG THÁI]=N'ĐANG CHỜ'))
+GO
+ALTER TABLE [dbo].[TRANSACTION] CHECK CONSTRAINT [CK_TRANSACTION_1]
+GO
+ALTER TABLE [dbo].[TRANSACTION]  WITH NOCHECK ADD  CONSTRAINT [CK_TRANSACTION_2] CHECK  (([PHƯƠNG THỨC]=N'CREDIT_CARD' OR [PHƯƠNG THỨC]=N'BANKING' OR [PHƯƠNG THỨC]=N'MOMO'))
+GO
+ALTER TABLE [dbo].[TRANSACTION] CHECK CONSTRAINT [CK_TRANSACTION_2]
+GO
+--USE [master]
+--GO
+ALTER DATABASE [CineB] SET  READ_WRITE 
+GO

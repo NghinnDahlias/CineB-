@@ -1,3 +1,6 @@
+/**
+ * Hạ tầng DB dùng chung mọi page (pool, query). Không chứa logic nghiệp vụ từng feature.
+ */
 require('dotenv').config();
 const sql = require('mssql');
 
