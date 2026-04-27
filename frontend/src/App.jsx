@@ -8,11 +8,15 @@ import AppShell from "./components/AppShell";
 import { Page1OrderView } from "./page1";
 import Page2 from "./pages/Page2";
 import Page3 from "./pages/Page3";
+// 1. Import trang mới
+import ReportDashboardPage from "./pages/ReportDashboardPage";
 
+// 2. Thêm tab Báo cáo
 const TABS = [
-  { id: "page1", label: "Page 1" },
+  { id: "page1", label: "Page 1 (Order)" },
   { id: "page2", label: "Page 2" },
-  { id: "page3", label: "Page 3" }
+  { id: "page3", label: "Page 3" },
+  { id: "report", label: "Báo Cáo Hiệu Suất" } 
 ];
 
 export default function App() {
@@ -23,6 +27,9 @@ export default function App() {
       {activeTab === "page1" ? <Page1OrderView /> : null}
       {activeTab === "page2" ? <Page2 /> : null}
       {activeTab === "page3" ? <Page3 /> : null}
+      
+      {/* 3. Render trang báo cáo khi tab được chọn */}
+      {activeTab === "report" ? <ReportDashboardPage /> : null}
     </AppShell>
   );
 }
