@@ -32,17 +32,22 @@ BEGIN
     SELECT @TrangThaiCu = [TRẠNG THÁI], @OldKhuyenMai = [MÃ KHUYẾN MÃI]
     FROM dbo.[ORDER] WHERE [MÃ ĐƠN HÀNG] = @MaDonHang;
     -- check trạng thái
-    IF @TrangThai IS NOT NULL
-    BEGIN
-        -- trạng thái không hợp lệ
-        IF @TrangThai NOT IN (N'ĐÃ THANH TOÁN', N'ĐÃ HỦY', N'ĐANG CHỜ')
-            SET @ErrorMsg += N'Trạng thái không hợp lệ; ';
         -- chỉ trạng thái đang chờ -> đã thanh toán
-        -- chỉ trạng thái đang chờ -> đã hủy            
-        ELSE IF (@TrangThaiCu = N'ĐÃ THANH TOÁN' AND @TrangThai IN (N'ĐÃ HỦY', N'ĐANG CHỜ'))
-         OR (@TrangThaiCu = N'ĐÃ HỦY' AND @TrangThai IN (N'ĐÃ THANH TOÁN', N'ĐANG CHỜ'))
-            SET @ErrorMsg += N'Không hợp lệ khi đổi trạng thái; ';
-    END
+        -- chỉ trạng thái đang chờ -> đã hủy 
+        -- chỉ trạng thái đang chờ -> đang chờ
+    IF @TrangThaiCu = N'ĐÃ THANH TOÁN'
+    BEGIN
+        RAISERROR(N'Không thể cập nhật đơn hàng đã thanh toán.', 16, 1);
+        RETURN;    
+    END;
+    ELSE IF @TrangThaiCu = N'ĐÃ HỦY'
+    BEGIN
+        RAISERROR(N'Không thể cập nhật đơn hàng đã hủy.', 16, 1);
+        RETURN;    
+    END;
+    -- trạng thái không hợp lệ
+    IF @TrangThai NOT IN (N'ĐÃ THANH TOÁN', N'ĐÃ HỦY', N'ĐANG CHỜ')
+            SET @ErrorMsg += N'Trạng thái không hợp lệ; ';           
     -- check promotion id
     IF @MaKhuyenMai IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.PROMOTION WHERE [MÃ KHUYẾN MÃI] = @MaKhuyenMai)
             SET @ErrorMsg += N'Mã Khuyến mãi không tồn tại; ';
@@ -56,39 +61,15 @@ BEGIN
         RAISERROR(@ErrorMsg, 16, 1);
         RETURN;
     END
-    -- tính tổng tiền với các order detail và fnb
-    DECLARE @TongTien NUMERIC(18, 0);
-    -- SUM không có dòng nào trả về NULL -> phải gán 0 để khớp cột NOT NULL
-    SELECT @TongTien = COALESCE(SUM(od.[SỐ LƯỢNG SẢN PHẨM] * f.[GIÁ CẢ]), 0)
-    FROM dbo.ORDER_DETAIL od
-    JOIN dbo.FNB f 
-        ON od.[MÃ SẢN PHẨM] = f.[MÃ SẢN PHẨM]
-    WHERE 
-        od.[MÃ ĐƠN HÀNG] = @MaDonHang AND f.[TRẠNG THÁI] = N'ĐANG BÁN'
     -- check trạng thái
     IF @TrangThai IS NULL
         SET @TrangThai = @TrangThaiCu;
     -- check mã khuyến mãi
     IF @MaKhuyenMai IS NULL
         SET @MaKhuyenMai = @OldKhuyenMai;
-    -- tính số tiền giảm
-    DECLARE @SoTienGiam NUMERIC(18, 0), @PhanTramGiam NUMERIC(5, 2), @GiamToiDa NUMERIC(6, 0);
-    SELECT @PhanTramGiam = [PHẦN TRĂM GIẢM], @GiamToiDa = [GIÁ TRỊ GIẢM TỐI ĐA]
-    FROM dbo.PROMOTION WHERE [MÃ KHUYẾN MÃI] = @MaKhuyenMai;
-    -- nếu khuyến mãi là giá trị cố định
-    SET @SoTienGiam = @GiamToiDa
-    -- nếu khuyến mãi là phần trăm
-    IF @PhanTramGiam IS NOT NULL
-    BEGIN
-        SET @SoTienGiam = @TongTien * @PhanTramGiam / 100;
-        IF @SoTienGiam > @GiamToiDa
-            SET @SoTienGiam = @GiamToiDa;
-    END
-    SET @SoTienGiam = ISNULL(@SoTienGiam, 0);
 
     UPDATE dbo.[ORDER]
     SET 
-        [TỔNG TIỀN] = @TongTien, [SỐ TIỀN GIẢM] = @SoTienGiam,
         [TRẠNG THÁI] = @TrangThai, [MÃ KHUYẾN MÃI] = @MaKhuyenMai
     WHERE [MÃ ĐƠN HÀNG] = @MaDonHang;
 END;
