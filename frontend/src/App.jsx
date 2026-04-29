@@ -1,35 +1,63 @@
-/**
- * Điều hướng tab: mỗi tab nên gắn một thư mục feature riêng.
- * - page1 → src/page1 (ORDER, /api/orders) — không trộn code với page khác.
- * - page2 / page3 → placeholder trong ./pages; khi làm bài hãy tách ./page2, ./page3 tương tự page1.
- */
-import { useState } from "react";
-import AppShell from "./components/AppShell";
-import { Page1OrderView } from "./page1";
-import Page2 from "./pages/Page2";
-import Page3 from "./pages/Page3";
-// 1. Import trang mới
-import ReportDashboardPage from "./pages/ReportDashboardPage";
+import { useMemo, useState } from "react";
+import Navbar from "./components/Navbar";
+import Sidebar from "./components/Sidebar";
+import Dashboard from "./components/dashboard";
+import OrderManagement from "./components/OrderManagement";
+import PerformanceReport from "./components/PerformanceReport";
+import CustomerHistory from "./components/CustomerHistory";
+import TopMovieStats from "./components/TopMovieStats";
 
-// 2. Thêm tab Báo cáo
-const TABS = [
-  { id: "page1", label: "Page 1 (Order)" },
-  { id: "page2", label: "Page 2" },
-  { id: "page3", label: "Page 3" },
-  { id: "report", label: "Báo Cáo Hiệu Suất" } 
+const NAV_ITEMS = [
+  { id: "dashboard", label: "Trang chủ", icon: "dashboard" },
+  { id: "orders", label: "Đơn hàng", icon: "orders" },
+  { id: "performance", label: "Hiệu suất", icon: "performance" },
+  { id: "customers", label: "Khách hàng", icon: "customers" },
+  { id: "movies", label: "Phim", icon: "movies" },
 ];
 
+const PAGE_COMPONENTS = {
+  dashboard: Dashboard,
+  orders: OrderManagement,
+  performance: PerformanceReport,
+  customers: CustomerHistory,
+  movies: TopMovieStats,
+};
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState("page1");
+  const [activePage, setActivePage] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+
+  const ActivePage = useMemo(() => PAGE_COMPONENTS[activePage] ?? Dashboard, [activePage]);
 
   return (
-    <AppShell tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
-      {activeTab === "page1" ? <Page1OrderView /> : null}
-      {activeTab === "page2" ? <Page2 /> : null}
-      {activeTab === "page3" ? <Page3 /> : null}
-      
-      {/* 3. Render trang báo cáo khi tab được chọn */}
-      {activeTab === "report" ? <ReportDashboardPage /> : null}
-    </AppShell>
+    <div className="app-shell">
+      <Sidebar
+        items={NAV_ITEMS}
+        activePage={activePage}
+        onNavigate={(pageId) => {
+          setActivePage(pageId);
+          setSidebarOpen(false);
+        }}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+
+      <div className="app-shell__content">
+        <Navbar
+          onMenuClick={() => setSidebarOpen(true)}
+          searchValue={searchValue}
+          onSearchChange={setSearchValue}
+        />
+
+        <main className="app-main">
+          <ActivePage searchValue={searchValue} />
+        </main>
+
+        <footer className="app-footer">
+          <span>CineManager © 2026</span>
+        </footer>
+      </div>
+    </div>
   );
 }

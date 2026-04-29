@@ -1,7 +1,7 @@
 USE CineB;
 GO
  
-ALTER FUNCTION dbo.fn_TinhDiemVaHangKhachHang (@MaKH NCHAR(8))
+CREATE OR ALTER FUNCTION dbo.fn_TinhDiemVaHangKhachHang (@MaKH NCHAR(8))
 RETURNS NVARCHAR(100)
 AS
 BEGIN
@@ -61,7 +61,7 @@ BEGIN
 END
 GO
  
-ALTER FUNCTION dbo.fn_PhanTichHieuSuatPhong
+CREATE OR ALTER FUNCTION dbo.fn_PhanTichHieuSuatPhong
 (
     @MaRap  NCHAR(6),
     @MaPhong NCHAR(3),

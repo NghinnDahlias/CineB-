@@ -9,6 +9,7 @@ const cors = require("cors");
 const { query } = require("./db.js");
 const { orderRoutes } = require("./page1");
 const { reportRoutes } = require("./reports");
+const customerApi = require("./customerApi.js");
 
 const sql = require('mssql');
 
@@ -31,6 +32,8 @@ app.get("/api/health", async (req, res) => {
 
 app.use("/api/orders", orderRoutes);
 app.use("/api/reports", reportRoutes);
+
+app.use("/api/customers", customerApi);
 
 app.listen(PORT, () => {
   console.log(`\n[CineB backend] http://localhost:${PORT}`);
