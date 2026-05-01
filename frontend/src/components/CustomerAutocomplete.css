@@ -1,0 +1,188 @@
+/**
+ * frontend/src/components/CustomerAutocomplete.css
+ * Styling cho customer autocomplete component
+ */
+
+.customer-autocomplete {
+  position: relative;
+  width: 100%;
+}
+
+.autocomplete-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* Input field */
+.autocomplete-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  transition: all 0.2s ease;
+  background-color: #fff;
+}
+
+.autocomplete-input:focus {
+  outline: none;
+  border-color: #14b8a6;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+}
+
+.autocomplete-input.error {
+  border-color: #ef4444;
+}
+
+.autocomplete-input.error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* Loading indicator */
+.autocomplete-loading {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: translateY(-50%) rotate(0deg); }
+  100% { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* Dropdown list */
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+/* Dropdown item */
+.autocomplete-option {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.autocomplete-option:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-option:hover {
+  background-color: #f9fafb;
+}
+
+.autocomplete-option:active {
+  background-color: #e5e7eb;
+}
+
+.autocomplete-option strong {
+  color: #14b8a6;
+  font-weight: 600;
+  min-width: 80px;
+}
+
+.autocomplete-separator {
+  color: #9ca3af;
+  margin: 0 4px;
+}
+
+.autocomplete-option span:not(.autocomplete-separator) {
+  color: #374151;
+}
+
+.autocomplete-detail {
+  color: #9ca3af;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+/* No results */
+.autocomplete-empty {
+  padding: 16px 12px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+/* Error text */
+.error-text {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Selected customer display */
+.selected-customer {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background-color: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #166534;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.selected-customer strong {
+  color: #15803d;
+}
+
+.clear-btn {
+  background: none;
+  border: none;
+  color: #dc2626;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  transition: color 0.2s ease;
+}
+
+.clear-btn:hover {
+  color: #991b1b;
+}
+
+/* Scrollbar styling */
+.autocomplete-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.autocomplete-dropdown::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.autocomplete-dropdown::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.autocomplete-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
