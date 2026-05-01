@@ -27,27 +27,7 @@ const ROOM_MAP = {
   RAP002: [{ id: 'P01', name: 'P01' }, { id: 'P02', name: 'P02' }],
   RAP003: [{ id: 'P01', name: 'P01' }, { id: 'P02', name: 'P02' }],
 };
-
-const [cinemaList, setCinemaList] = useState([]); //
-const [roomMap, setRoomMap] = useState({});
-
-useEffect(() => {
-  async function loadInitialData() {
-    try {
-      // Gọi API lấy danh sách rạp từ bảng CINEMA
-      const cinemas = await apiFetch('/api/cinemas'); 
-      setCinemaList(cinemas);
-      
-      // Gọi API lấy danh sách phòng từ bảng ROOM[cite: 3]
-      const rooms = await apiFetch('/api/rooms');
-      setRoomMap(rooms);
-    } catch (err) {
-      console.error("Lỗi tải danh sách rạp/phòng");
-    }
-  }
-  loadInitialData();
-}, []);
-
+ 
 async function apiFetch(path) {
   const res = await fetch(path);
   if (!res.ok) throw new Error(`HTTP ${res.status} — ${path}`);
@@ -70,32 +50,22 @@ export default function ReportDashboardPage() {
  
  
   async function fetchReportData() {
-  setLoading(true);
-  // Tạo query string đúng chuẩn để Backend lọc theo bảng [ORDER] và [SHOWTIME][cite: 3]
-  const p = new URLSearchParams({
-    cinemaId: filters.cinemaId,
-    roomId: filters.roomId,
-    month: filters.month,
-    year: filters.year
-  }).toString();
-
-  try {
-    const [statusData, detailData, trendData] = await Promise.all([
-      apiFetch(`/api/reports/status?${p}`),
-      apiFetch(`/api/reports/details?${p}`),
-      apiFetch(`/api/reports/trends?${p}`), // Lấy dữ liệu biểu đồ thực tế
-    ]);
-    setStats(statusData);
-    setShowtimes(detailData);
-    setTrendData(trendData); // Cập nhật state cho biểu đồ
-  } catch (err) {
-    // Xử lý lỗi khi không kết nối được database[cite: 3]
-    setStats({ status: '', totalShowtimes: 0, totalTicketsSold: 0 });
-    setShowtimes([]);
-  } finally {
-    setLoading(false);
+    setLoading(true);
+    const p = `cinemaId=${filters.cinemaId}&roomId=${filters.roomId}&month=${filters.month}&year=${filters.year}`;
+    try {
+      const [statusData, detailData] = await Promise.all([
+        apiFetch(`/api/reports/status?${p}`),
+        apiFetch(`/api/reports/details?${p}`),
+      ]);
+      setStats(statusData);
+      setShowtimes(detailData);
+    } catch (err) {
+      setStats({ status: '', totalShowtimes: 0, totalTicketsSold: 0 });
+      setShowtimes([]);
+    } finally {
+      setLoading(false);
+    }
   }
-}
  
   // Fetch ngay khi load trang
   useEffect(() => { fetchReportData(); }, []);
