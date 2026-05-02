@@ -31,8 +31,8 @@ EXEC dbo.sp_CapNhatOrder
     @MaKhuyenMai  = N'P008'; -- TEST MÃ KHUYẾN MÃI KHÔNG HOẠT ĐỘNG
 -- CASE 8: UPDATE THẢNH CÔNG MÃ KHUYẾN MÃI GIÁ TRỊ
 EXEC dbo.sp_CapNhatOrder 
-    -- KHÔNG TRUYỀN VALUE CHO TRẠNG THÁI, MẶC ĐỊNH LÀ NULL (TỨC KHÔNG THAY ĐỔI TRẠNG THÁI BAN ĐẦU)
     @MaDonHang   = N'O00006',
+    @TrangThai   = N'ĐANG CHỜ',
     @MaKhuyenMai  = N'P010'; -- THAY ĐỔI MÃ KHUYẾN MÃI
 SELECT * FROM dbo.[ORDER];
 -- CASE 9: UPDATE THẢNH CÔNG MÃ KHUYÊN MÃI PHẦN TRĂM
@@ -71,15 +71,21 @@ EXEC dbo.sp_CapNhatOrder
     @MaDonHang   = N'O00003',
     @TrangThai   = N'ĐANG CHỜ',
     @MaKhuyenMai  = N'P004'; -- TEST MÃ KHUYẾN MÃI VVIP HẠN DÙNG 3 THÁNG
--- CASE 15: DELETE CHECK MÃ ĐƠN HÀNG KHÔNG TỒN TẠI
+-- CASE 15: UPDATE THÀNH CÔNG KHI KHÔNG DÙNG MÃ KHUYẾN MÃI
+EXEC dbo.sp_CapNhatOrder
+    @MaDonHang   = N'O00006',
+    @TrangThai   = N'ĐANG CHỜ',
+    @MaKhuyenMai  = NULL; -- KHÔNG DÙNG MÃ KHUYẾN MÃI
+SELECT * FROM dbo.[ORDER];
+-- CASE 16: DELETE CHECK MÃ ĐƠN HÀNG KHÔNG TỒN TẠI
 EXEC dbo.sp_XoaOrder N'O99999';
--- CASE 16: DELETE CHECK TRẠNG THÁI ĐÃ THANH TOÁN
+-- CASE 17: DELETE CHECK TRẠNG THÁI ĐÃ THANH TOÁN
 EXEC dbo.sp_XoaOrder N'O00011';
--- CASE 17: DELETE CHECK TRẠNG THÁI ĐÃ HỦY
+-- CASE 18: DELETE CHECK TRẠNG THÁI ĐÃ HỦY
 EXEC dbo.sp_XoaOrder N'O00012';
--- CASE 18: DELETE CHECK ĐƠN HÀNG ĐANG CHỜ TỐI ĐA 5 PHÚT
+-- CASE 19: DELETE CHECK ĐƠN HÀNG ĐANG CHỜ TỐI ĐA 5 PHÚT
 EXEC dbo.sp_XoaOrder N'O00014';
--- CASE 19: DELETE THÀNH CÔNG ĐƠN HÀNG ĐANG CHỜ LỚN HƠN 5 PHÚT
+-- CASE 20: DELETE THÀNH CÔNG ĐƠN HÀNG ĐANG CHỜ LỚN HƠN 5 PHÚT
 EXEC dbo.sp_XoaOrder N'O00006';
 SELECT * FROM dbo.[ORDER];
 SELECT * FROM dbo.[ORDER_DETAIL];

@@ -24,7 +24,7 @@ END;
 GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_CapNhatOrder
-    @MaDonHang [nvarchar](6), @TrangThai [nvarchar](15) = NULL, @MaKhuyenMai [nvarchar](4) = NULL
+    @MaDonHang [nvarchar](6), @TrangThai [nvarchar](15), @MaKhuyenMai [nvarchar](4)
 AS
 BEGIN
     DECLARE @ErrorMsg NVARCHAR(MAX) = N'', @TrangThaiCu NVARCHAR(15), @OldKhuyenMai NVARCHAR(4), 
@@ -101,12 +101,6 @@ BEGIN
         RAISERROR(@ErrorMsg, 16, 1);
         RETURN;
     END
-    -- check trạng thái
-    IF @TrangThai IS NULL
-        SET @TrangThai = @TrangThaiCu;
-    -- check mã khuyến mãi
-    IF @MaKhuyenMai IS NULL
-        SET @MaKhuyenMai = @OldKhuyenMai;
 
     UPDATE dbo.[ORDER]
     SET 

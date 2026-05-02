@@ -7,6 +7,7 @@ const statusOptions = ["Tất cả", "ĐANG CHỜ", "ĐÃ THANH TOÁN", "ĐÃ H�
 const statusList = ["ĐANG CHỜ", "ĐÃ THANH TOÁN", "ĐÃ HỦY"];
 
 const defaultForm = {
+  orderId: "", // Dùng cho cập nhật thủ công
   customerId: "",
   status: "ĐANG CHỜ",
   promoCode: "",
@@ -56,11 +57,14 @@ export default function OrderManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
-  const [editingId, setEditingId] = useState("");
   const [form, setForm] = useState(defaultForm);
   const [errors, setErrors] = useState({});
+  const [editingId, setEditingId] = useState("");
+  const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+  const [isUpdateModalOpen, setUpdateModalOpen] = useState(false);
+  const [isManualUpdate, setIsGlobalUpdate] = useState(false);
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
 
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [orderDetails, setOrderDetails] = useState([]);
@@ -130,26 +134,51 @@ export default function OrderManagement() {
     setEditingId("");
     setForm(defaultForm);
     setErrors({});
-    setError(""); // Xóa lỗi cũ
-    setModalOpen(true);
+    setError("");
+    setCreateModalOpen(true);
   };
 
   const openEdit = (order) => {
     setEditingId(order.id);
+    setIsGlobalUpdate(false);
     setForm({
+      orderId: order.id,
       customerId: order.customerId,
       status: order.status,
       promoCode: order.promoCode || "",
     });
     setErrors({});
-    setError(""); // Xóa lỗi cũ
-    setModalOpen(true);
+    setError("");
+    setUpdateModalOpen(true);
   };
 
-  const closeModal = () => {
-    setModalOpen(false);
+  const openGlobalUpdate = () => {
+    setEditingId("");
+    setIsGlobalUpdate(true);
+    setForm({ ...defaultForm, status: "ĐANG CHỜ" });
     setErrors({});
-    setError(""); // Xóa lỗi khi đóng
+    setError("");
+    setUpdateModalOpen(true);
+  };
+
+  const openGlobalDelete = () => {
+    setForm({ ...defaultForm, orderId: "" });
+    setError("");
+    setDeleteModalOpen(true);
+  };
+
+  const closeCreateModal = () => {
+    setCreateModalOpen(false);
+    setErrors({});
+    setError("");
+  };
+
+  const closeUpdateModal = () => {
+    setUpdateModalOpen(false);
+    setIsGlobalUpdate(false);
+    setEditingId("");
+    setErrors({});
+    setError("");
   };
 
   const handleViewDetails = async (order) => {
@@ -178,33 +207,50 @@ export default function OrderManagement() {
     return {};
   };
 
-  const handleSubmit = async (event) => {
+  const handleCreateSubmit = async (event) => {
     event.preventDefault();
-    const nextErrors = validateForm();
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
-
+    if (!form.customerId.trim()) {
+      setErrors({ customerId: "Vui lòng chọn khách hàng" });
+      return;
+    }
     setSaving(true);
     setError("");
     try {
-      if (editingId) {
-        await orderService.update(editingId, {
-          status: form.status,
-          promoCode: form.promoCode || null,
-        });
-      } else {
-        await orderService.create(form.customerId.trim());
-      }
+      await orderService.create(form.customerId.trim());
       await loadOrders();
-      closeModal();
+      closeCreateModal();
     } catch (err) {
-      setError(err?.response?.data?.error || err?.message || "Không thể lưu đơn hàng.");
+      setError(err?.response?.data?.error || err?.message || "Không thể tạo đơn hàng.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateSubmit = async (event) => {
+    event.preventDefault();
+    const targetId = editingId || form.orderId.trim();
+    if (!targetId) {
+      setError("Vui lòng nhập Mã đơn hàng.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      await orderService.update(targetId, {
+        status: form.status,
+        promoCode: form.promoCode || null,
+      });
+      await loadOrders();
+      closeUpdateModal();
+    } catch (err) {
+      setError(err?.response?.data?.error || err?.message || "Không thể cập nhật đơn hàng.");
     } finally {
       setSaving(false);
     }
   };
 
   const handleEditClick = (order) => {
+    setError(""); // Xóa lỗi cũ
     if (order.status === "ĐÃ THANH TOÁN" || order.status === "ĐÃ HỦY") {
       setConfirmDialog({
         id: order.id,
@@ -218,6 +264,7 @@ export default function OrderManagement() {
   };
 
   const handleDeleteClick = (id, status) => {
+    setError(""); // Xóa lỗi cũ trước khi hiện Dialog mới
     if (status === "ĐÃ THANH TOÁN" || status === "ĐÃ HỦY") {
       setConfirmDialog({
         id,
@@ -266,9 +313,15 @@ export default function OrderManagement() {
           <p>Theo dõi đơn hàng, trạng thái thanh toán và thao tác nhanh.</p>
         </div>
         <div className="page__actions">
-          <button type="button" className="btn btn--secondary">Xuất dữ liệu</button>
+          {/* <button type="button" className="btn btn--secondary">Xuất dữ liệu</button> */}
           <button type="button" className="btn btn--primary" onClick={openCreate}>
             <Plus size={16} /> Đơn hàng mới
+          </button>
+          <button type="button" className="btn btn--secondary" onClick={openGlobalUpdate} style={{ backgroundColor: "#f3f4f6", color: "#374151" }}>
+            <PencilLine size={16} /> Cập nhật đơn
+          </button>
+          <button type="button" className="btn btn--secondary" onClick={openGlobalDelete} style={{ color: "#ef4444", borderColor: "#fecaca" }}>
+            <Trash2 size={16} /> Xóa đơn
           </button>
         </div>
       </div>
@@ -431,103 +484,107 @@ export default function OrderManagement() {
         )}
       </article>
 
-      {/* Modal thêm/sửa */}
-      {modalOpen ? (
-        <div className="modal-overlay" role="presentation" onClick={closeModal}>
-          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="order-modal-title" onClick={(event) => event.stopPropagation()}>
-            <form onSubmit={handleSubmit} noValidate>
+      {/* MODAL TẠO MỚI */}
+      {isCreateModalOpen && (
+        <div className="modal-overlay" role="presentation" onClick={closeCreateModal}>
+          <div className="modal" style={{ maxWidth: 450 }} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <form onSubmit={handleCreateSubmit}>
               <div className="modal__header">
                 <div>
-                  <h2 id="order-modal-title">{editingId ? "📝 Chỉnh sửa đơn hàng" : "➕ Tạo đơn hàng mới"}</h2>
-                  <p>{editingId ? "Cập nhật thông tin đơn hàng" : "Nhập thông tin khách hàng và chi tiết đơn"}</p>
+                  <h2>➕ Tạo đơn hàng mới</h2>
+                  <p>Nhập mã khách hàng để khởi tạo đơn</p>
                 </div>
-                <button type="button" className="icon-btn" onClick={closeModal} aria-label="Đóng" style={{ color: "#6b7280" }}>
-                  ✕
-                </button>
+                <button type="button" className="icon-btn" onClick={closeCreateModal}>✕</button>
               </div>
-
               <div className="modal__body">
                 {error && (
                   <div className="alert alert--danger" style={{ marginBottom: 16, padding: '10px 12px', fontSize: '13px', backgroundColor: "#fee2e2", color: "#b91c1c", borderRadius: 8 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <AlertTriangle size={16} />
-                      <strong>Lỗi Database:</strong> <span>{error}</span>
-                    </div>
+                    <AlertTriangle size={16} /> <strong>Lỗi:</strong> {error}
                   </div>
                 )}
-                {editingId ? (
-                  /* EDIT MODE - Chỉ sửa Status + Promo Code */
-                  <div className="form-grid form-grid--2">
-                    {/* Trạng thái */}
-                    <div className="field">
-                      <label htmlFor="form-status">
-                        Trạng thái <span style={{ color: "#ef4444" }}>*</span>
-                      </label>
-                      <select
-                        id="form-status"
-                        value={form.status}
-                        onChange={(event) => setForm((s) => ({ ...s, status: event.target.value }))}
-                      >
-                        {statusList.map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Mã khuyến mãi */}
-                    <div className="field">
-                      <label htmlFor="form-promo">Mã khuyến mãi (VD: P001, P010)</label>
-                      <input
-                        id="form-promo"
-                        type="text"
-                        value={form.promoCode}
-                        onChange={(event) => setForm((s) => ({ ...s, promoCode: event.target.value.toUpperCase() }))}
-                        placeholder="VD: P001, P010"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  /* CREATE MODE - Chỉ nhập Mã khách hàng */
-                  <div className="form-grid form-grid--1">
-                    {/* Mã khách hàng */}
-                    <div className="field">
-                      <label style={{ display: "block", marginBottom: 6 }}>
-                        Mã khách hàng <span style={{ color: "#ef4444" }}>*</span>
-                      </label>
-                      <CustomerAutocomplete
-                        value={form.customerId}
-                        onChange={(customerId) => {
-                          setForm((s) => ({ ...s, customerId: customerId || "" }));
-                        }}
-                        placeholder="Nhập mã khách (C000001) - 8 ký tự"
-                        error={errors.customerId}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Ghi chú khi edit */}
-                {editingId && (
-                  <div style={{ padding: "12px", backgroundColor: "#fef3c7", borderRadius: 8, marginTop: 16, fontSize: "0.9rem", color: "#92400e" }}>
-                    ℹ️ Chỉ có thể thay đổi trạng thái và mã khuyến mãi. Để sửa thông tin khác, vui lòng xóa và tạo đơn mới.
-                  </div>
-                )}
+                <div className="field">
+                  <label>Mã khách hàng <span style={{ color: "#ef4444" }}>*</span></label>
+                  <CustomerAutocomplete
+                    value={form.customerId}
+                    onChange={(id) => setForm((s) => ({ ...s, customerId: id || "" }))}
+                    placeholder="Nhập mã khách (C000001)"
+                    error={errors.customerId}
+                  />
+                </div>
               </div>
-
               <div className="modal__footer">
-                <button type="button" className="btn btn--secondary" onClick={closeModal}>
-                  Hủy
-                </button>
+                <button type="button" className="btn btn--secondary" onClick={closeCreateModal}>Hủy</button>
                 <button type="submit" className="btn btn--primary" disabled={saving}>
-                  {saving ? "Đang lưu..." : editingId ? "Cập nhật" : "➕ Tạo đơn hàng"}
+                  {saving ? "Đang xử lý..." : "Tạo đơn hàng"}
                 </button>
               </div>
             </form>
           </div>
         </div>
-      ) : null}
+      )}
+
+      {/* MODAL CẬP NHẬT */}
+      {isUpdateModalOpen && (
+        <div className="modal-overlay" role="presentation" onClick={closeUpdateModal}>
+          <div className="modal" style={{ maxWidth: 500 }} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <form onSubmit={handleUpdateSubmit}>
+              <div className="modal__header">
+                <div>
+                  <h2>📝 Cập nhật đơn hàng</h2>
+                  <p>{isManualUpdate ? "Cập nhật đơn hàng theo mã" : `Đang sửa đơn: ${editingId}`}</p>
+                </div>
+                <button type="button" className="icon-btn" onClick={closeUpdateModal}>✕</button>
+              </div>
+              <div className="modal__body">
+                {error && (
+                  <div className="alert alert--danger" style={{ marginBottom: 16, padding: '10px 12px', fontSize: '13px', backgroundColor: "#fee2e2", color: "#b91c1c", borderRadius: 8 }}>
+                    <AlertTriangle size={16} /> <strong>Lỗi:</strong> {error}
+                  </div>
+                )}
+                <div className="form-grid form-grid--1">
+                  {isManualUpdate && (
+                    <div className="field">
+                      <label>Mã đơn hàng <span style={{ color: "#ef4444" }}>*</span></label>
+                      <input
+                        value={form.orderId}
+                        onChange={(e) => setForm((s) => ({ ...s, orderId: e.target.value.toUpperCase() }))}
+                        placeholder="VD: O00011"
+                        autoFocus
+                      />
+                    </div>
+                  )}
+                  <div className="field">
+                    <label>Trạng thái <span style={{ color: "#ef4444" }}>*</span></label>
+                    <select value={form.status} onChange={(e) => setForm((s) => ({ ...s, status: e.target.value }))}>
+                      {statusList.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Mã khuyến mãi</label>
+                    <input
+                      type="text"
+                      value={form.promoCode}
+                      onChange={(e) => setForm((s) => ({ ...s, promoCode: e.target.value.toUpperCase() }))}
+                      placeholder="VD: P001"
+                    />
+                  </div>
+                </div>
+                {!isManualUpdate && (
+                  <div style={{ padding: "10px", backgroundColor: "#fffbeb", borderRadius: 6, marginTop: 12, fontSize: "0.85rem", color: "#92400e" }}>
+                    ℹ️ Chỉ có thể sửa Trạng thái và Khuyến mãi.
+                  </div>
+                )}
+              </div>
+              <div className="modal__footer">
+                <button type="button" className="btn btn--secondary" onClick={closeUpdateModal}>Hủy</button>
+                <button type="submit" className="btn btn--primary" disabled={saving}>
+                  {saving ? "Đang lưu..." : "Cập nhật"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Dialog xác nhận xóa */}
       {confirmDialog ? (
@@ -629,6 +686,68 @@ export default function OrderManagement() {
                 Đóng
               </button>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* MODAL XÓA NHANH */}
+      {isDeleteModalOpen ? (
+        <div className="modal-overlay" role="presentation" onClick={() => setDeleteModalOpen(false)}>
+          <div className="modal" style={{ maxWidth: 450 }} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!form.orderId.trim()) return;
+              setSaving(true);
+              setError("");
+              try {
+                await orderService.remove(form.orderId.trim());
+                setDeleteModalOpen(false);
+                await loadOrders();
+              } catch (err) {
+                setError(err?.response?.data?.error || err?.message || "Không thể xóa đơn hàng.");
+              } finally {
+                setSaving(false);
+              }
+            }}>
+              <div className="modal__header">
+                <div>
+                  <h2 style={{ color: "#ef4444" }}>🗑️ Xóa đơn hàng nhanh</h2>
+                  <p>Nhập mã đơn hàng để thực hiện xóa trực tiếp</p>
+                </div>
+                <button type="button" className="icon-btn" onClick={() => { setDeleteModalOpen(false); setError(""); }} aria-label="Đóng">
+                  ✕
+                </button>
+              </div>
+              <div className="modal__body">
+                {error && (
+                  <div className="alert alert--danger" style={{ marginBottom: 16, padding: '10px 12px', fontSize: '13px', backgroundColor: "#fee2e2", color: "#b91c1c", borderRadius: 8 }}>
+                    <strong>Lỗi Database:</strong> {error}
+                  </div>
+                )}
+                <div className="field">
+                  <label htmlFor="delete-order-id">Mã đơn hàng cần xóa <span style={{ color: "#ef4444" }}>*</span></label>
+                  <input
+                    id="delete-order-id"
+                    type="text"
+                    className="form-input"
+                    value={form.orderId}
+                    onChange={(e) => setForm({ ...form, orderId: e.target.value.toUpperCase() })}
+                    placeholder="VD: O00011"
+                    required
+                    autoFocus
+                  />
+                  <p style={{ marginTop: 12, fontSize: "0.85rem", color: "#6b7280", lineHeight: 1.5 }}>
+                    ⚠️ <strong>Lưu ý:</strong> Hệ thống sẽ kiểm tra trạng thái đơn hàng và các ràng buộc dữ liệu trước khi thực hiện xóa.
+                  </p>
+                </div>
+              </div>
+              <div className="modal__footer">
+                <button type="button" className="btn btn--secondary" onClick={() => { setDeleteModalOpen(false); setError(""); }}>Hủy</button>
+                <button type="submit" className="btn btn--danger" disabled={saving || !form.orderId.trim()}>
+                  {saving ? "Đang xóa..." : "Xác nhận xóa"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       ) : null}
