@@ -27,9 +27,12 @@ export const reportService = {
     return Array.isArray(res.data) ? res.data : [];
   },
 
-  getCustomerHistory: async (customerId, params = {}) => {
-    const res = await axios.get(`${BASE_URL}/api/reports/customers/${customerId}/history`, { params });
-    return Array.isArray(res.data) ? res.data : [];
+  // getCustomerHistory: async (customerId, params = {}) => {
+  //   const res = await axios.get(`${BASE_URL}/api/reports/customers/${customerId}/history`, { params });
+  //   return Array.isArray(res.data) ? res.data : [];
+  // },
+  getCustomerHistory(params) {
+    return api.get("/customers/history", { params });
   },
  
   getCinemas: async () => {
