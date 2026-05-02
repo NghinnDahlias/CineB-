@@ -63,11 +63,15 @@ export default function CustomerAutocomplete({
     if (!newInput.trim()) {
       setSuggestions([]);
       setIsOpen(false);
+      onChange(""); // Clear parent state too
       return;
     }
 
     // Fetch suggestions
     fetchCustomers(newInput);
+
+    // Đồng bộ ngay lập tức với component cha để hỗ trợ gõ trực tiếp (Direct Entry)
+    onChange(newInput);
   };
 
   /**
@@ -75,12 +79,13 @@ export default function CustomerAutocomplete({
    */
   const handleSelectCustomer = (customer) => {
     setSelectedCustomer(customer);
-    setInput(customer.label); // Hiển thị "MÃ | TÊN"
+    // UI ô nhập liệu: Chỉ hiển thị mã khách hàng (vd: C0000001) cho gọn
+    setInput(customer.code); 
     setSuggestions([]);
     setIsOpen(false);
     
-    // Gọi callback cha
-    onChange(customer.id); // Truyền mã khách hàng lên
+    // Gọi callback cha - Frontend vẫn nhận diện "MÃ"
+    onChange(customer.code); 
   };
 
   /**
@@ -143,9 +148,6 @@ export default function CustomerAutocomplete({
                 <strong>{customer.code}</strong>
                 <span className="autocomplete-separator">|</span>
                 <span>{customer.name}</span>
-                {customer.phone && (
-                  <span className="autocomplete-detail">({customer.phone})</span>
-                )}
               </div>
             ))}
           </div>
@@ -165,7 +167,7 @@ export default function CustomerAutocomplete({
       {/* Hiển thị khách hàng đã chọn */}
       {selectedCustomer && (
         <div className="selected-customer">
-          Đã chọn: <strong>{selectedCustomer.label}</strong>
+          Đã chọn: <strong>{selectedCustomer.code} | {selectedCustomer.name}</strong>
           <button
             type="button"
             className="clear-btn"

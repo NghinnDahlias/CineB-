@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, PencilLine, Trash2, AlertTriangle, Download, Eye, Search } from "lucide-react";
+import { Plus, PencilLine, Trash2, AlertTriangle, Download, Eye, Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { orderService } from "../../services/orderService";
 import CustomerAutocomplete from "./CustomerAutocomplete";
 
@@ -8,27 +8,38 @@ const statusList = ["ĐANG CHỜ", "ĐÃ THANH TOÁN", "ĐÃ HỦY"];
 
 const defaultForm = {
   customerId: "",
-  promoCode: "",
-  totalAmount: "",
-  discountAmount: "",
   status: "ĐANG CHỜ",
-  createdAt: new Date().toISOString().split("T")[0],
+  promoCode: "",
 };
 
 function currency(value) {
   return Number(value || 0).toLocaleString("vi-VN");
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return "---";
+  try {
+    // Chuyển về string và xử lý
+    const s = String(dateStr);
+    
+    // Tìm các con số trong chuỗi (Year, Month, Day, Hour, Minute)
+    // Phù hợp cho cả: 2026-05-02T19:31:07.260Z và 2026-05-02 19:31:07
+    const matches = s.match(/\d+/g); 
+    if (!matches || matches.length < 5) return s;
+
+    const [y, m, d, hr, min] = matches;
+    
+    // Trả về định dạng chuẩn VN
+    return `${d}/${m}/${y} ${hr}:${min}`;
+  } catch (e) {
+    return String(dateStr);
+  }
+}
+
 function statusTone(status) {
   if (status === "ĐÃ THANH TOÁN") return "badge--teal";
   if (status === "ĐÃ HỦY") return "badge--red";
   return "badge--amber";
-}
-
-function formatDate(value) {
-  if (!value) return "--";
-  const date = new Date(value);
-  return date.toLocaleDateString("vi-VN") + " " + date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
 }
 
 function parseNumber(str) {
@@ -50,6 +61,11 @@ export default function OrderManagement() {
   const [editingId, setEditingId] = useState("");
   const [form, setForm] = useState(defaultForm);
   const [errors, setErrors] = useState({});
+
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [orderDetails, setOrderDetails] = useState([]);
+  const [viewingOrder, setViewingOrder] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -75,7 +91,7 @@ export default function OrderManagement() {
     const search = query.trim().toLowerCase();
     let result = orders.filter((order) => {
       const matchesSearch = !search || [order.id, order.customerId, order.customerName, order.promoCode].some((value) =>
-        String(value).toLowerCase().includes(search)
+        String(value || "").toLowerCase().includes(search)
       );
       const matchesStatus = statusFilter === "Tất cả" || order.status === statusFilter;
       return matchesSearch && matchesStatus;
@@ -104,6 +120,7 @@ export default function OrderManagement() {
     return [
       { label: "Tổng đơn", value: orders.length, note: "Tất cả đơn hàng" },
       { label: "Đã thanh toán", value: paid.length, note: "Thanh toán thành công" },
+      { label: "Đã hủy", value: cancelled.length, note: "Đơn hàng đã hủy" },
       { label: "Đang chờ", value: pending.length, note: "Đang chờ xử lý" },
       { label: "Doanh thu", value: `${currency(revenue)} đ`, note: "Doanh thu đã thanh toán" },
     ];
@@ -113,6 +130,7 @@ export default function OrderManagement() {
     setEditingId("");
     setForm(defaultForm);
     setErrors({});
+    setError(""); // Xóa lỗi cũ
     setModalOpen(true);
   };
 
@@ -120,54 +138,44 @@ export default function OrderManagement() {
     setEditingId(order.id);
     setForm({
       customerId: order.customerId,
-      promoCode: order.promoCode || "",
-      totalAmount: String(order.totalAmount || 0),
-      discountAmount: String(order.discountAmount || 0),
       status: order.status,
-      createdAt: new Date(order.createdAt).toISOString().split("T")[0],
+      promoCode: order.promoCode || "",
     });
     setErrors({});
+    setError(""); // Xóa lỗi cũ
     setModalOpen(true);
   };
 
   const closeModal = () => {
     setModalOpen(false);
     setErrors({});
+    setError(""); // Xóa lỗi khi đóng
+  };
+
+  const handleViewDetails = async (order) => {
+    setViewingOrder(order);
+    setDetailsModalOpen(true);
+    setDetailsLoading(true);
+    try {
+      const data = await orderService.getDetails(order.id);
+      setOrderDetails(data);
+    } catch (err) {
+      console.error("Lỗi tải chi tiết đơn hàng:", err);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const closeDetailsModal = () => {
+    setDetailsModalOpen(false);
+    setViewingOrder(null);
+    setOrderDetails([]);
   };
 
   const validateForm = () => {
-    const nextErrors = {};
-
-    if (!form.customerId.trim()) {
-      nextErrors.customerId = "Mã khách hàng là bắt buộc.";
-    }
-
-    if (!editingId) {
-      const total = parseNumber(form.totalAmount);
-      if (form.totalAmount.trim() === "") {
-        nextErrors.totalAmount = "Tổng tiền là bắt buộc.";
-      } else if (total <= 0) {
-        nextErrors.totalAmount = "Tổng tiền phải lớn hơn 0.";
-      }
-    }
-
-    if (!editingId) {
-      const discount = parseNumber(form.discountAmount);
-      const total = parseNumber(form.totalAmount);
-      if (form.discountAmount.trim() === "") {
-        nextErrors.discountAmount = "Số tiền giảm là bắt buộc.";
-      } else if (discount < 0) {
-        nextErrors.discountAmount = "Số tiền giảm không được âm.";
-      } else if (discount > total && total > 0) {
-        nextErrors.discountAmount = "Số tiền giảm không được vượt quá tổng tiền.";
-      }
-    }
-
-    if (form.createdAt === "") {
-      nextErrors.createdAt = "Ngày tạo là bắt buộc.";
-    }
-
-    return nextErrors;
+    // Đã xóa bỏ validation ở frontend để nhấn mạnh vai trò của Database 
+    // Mọi lỗi dữ liệu sẽ do Stored Procedure/Trigger trong Database trả về.
+    return {};
   };
 
   const handleSubmit = async (event) => {
@@ -196,13 +204,26 @@ export default function OrderManagement() {
     }
   };
 
+  const handleEditClick = (order) => {
+    if (order.status === "ĐÃ THANH TOÁN" || order.status === "ĐÃ HỦY") {
+      setConfirmDialog({
+        id: order.id,
+        type: "error",
+        title: "Không thể cập nhật",
+        message: `Đơn hàng ở trạng thái ${order.status} không được phép chỉnh sửa trực tiếp.`,
+      });
+      return;
+    }
+    openEdit(order);
+  };
+
   const handleDeleteClick = (id, status) => {
-    if (status === "ĐÃ THANH TOÁN") {
+    if (status === "ĐÃ THANH TOÁN" || status === "ĐÃ HỦY") {
       setConfirmDialog({
         id,
         type: "error",
         title: "Không thể xóa",
-        message: "Không được xóa đơn hàng đã thanh toán. Vui lòng liên hệ quản trị viên nếu cần hủy.",
+        message: `Không được xóa đơn hàng ở trạng thái ${status}.`,
       });
       return;
     }
@@ -216,21 +237,15 @@ export default function OrderManagement() {
 
   const confirmDelete = async () => {
     const { id } = confirmDialog;
-    setConfirmDialog(null);
     setError("");
     try {
       await orderService.remove(id);
+      setConfirmDialog(null);
       await loadOrders();
     } catch (err) {
       setError(err?.response?.data?.error || err?.message || "Không thể xóa đơn hàng.");
     }
   };
-
-  const finalAmount = useMemo(() => {
-    const total = parseNumber(form.totalAmount);
-    const discount = parseNumber(form.discountAmount);
-    return Math.max(0, total - discount);
-  }, [form.totalAmount, form.discountAmount]);
 
   const toggleSort = (field) => {
     if (sortBy === field) {
@@ -298,7 +313,7 @@ export default function OrderManagement() {
             <label htmlFor="sort-by">Sắp xếp theo</label>
             <select id="sort-by" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
               <option value="createdAt">Ngày tạo</option>
-              <option value="finalAmount">Tổng tiền cuối</option>
+              <option value="finalAmount">Số tiền cuối</option>
             </select>
           </div>
           <button
@@ -312,15 +327,7 @@ export default function OrderManagement() {
         </div>
       </div>
 
-      {/* Thông báo lỗi */}
-      {error ? (
-        <div className="page-card" style={{ backgroundColor: "#fee2e2", borderColor: "#fecaca", color: "#b91c1c", padding: 16, borderRadius: 12 }}>
-          <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-            <AlertTriangle size={20} style={{ flexShrink: 0, marginTop: 2 }} />
-            <div>{error}</div>
-          </div>
-        </div>
-      ) : null}
+      {/* Lỗi sẽ được hiển thị ngay trong Modal/Dialog thao tác */}
 
       {/* Bảng đơn hàng */}
       <article className="page-card table-card">
@@ -346,12 +353,27 @@ export default function OrderManagement() {
                   <th>Mã khách hàng</th>
                   <th>Khách hàng</th>
                   <th style={{ cursor: "pointer" }} onClick={() => toggleSort("createdAt")} title="Nhấn để sắp xếp">
-                    Ngày tạo {sortBy === "createdAt" && (sortOrder === "asc" ? "⬆" : "⬇")}
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      Ngày tạo 
+                      {sortBy === "createdAt" ? (
+                        sortOrder === "asc" ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                      ) : (
+                        <ArrowUpDown size={14} style={{ opacity: 0.3 }} />
+                      )}
+                    </div>
                   </th>
                   <th>Trạng thái</th>
                   <th>Mã khuyến mãi</th>
+                  <th style={{ textAlign: "right" }}>Số tiền giảm</th>
                   <th style={{ textAlign: "right", cursor: "pointer" }} onClick={() => toggleSort("finalAmount")} title="Nhấn để sắp xếp">
-                    Tổng tiền cuối {sortBy === "finalAmount" && (sortOrder === "asc" ? "⬆" : "⬇")}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4 }}>
+                      Số tiền cuối
+                      {sortBy === "finalAmount" ? (
+                        sortOrder === "asc" ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                      ) : (
+                        <ArrowUpDown size={14} style={{ opacity: 0.3 }} />
+                      )}
+                    </div>
                   </th>
                   <th style={{ textAlign: "center" }}>Thao tác</th>
                 </tr>
@@ -365,29 +387,25 @@ export default function OrderManagement() {
                       {order.customerName || "Khách vãng lai"}
                     </td>
 
-                    <td style={{ color: "#6b7280", fontSize: "0.9rem" }}>{formatDate(order.createdAt)}</td>
+                    <td style={{ color: "#6b7280", fontSize: "0.85rem", whiteSpace: "nowrap" }}>
+                      {formatDate(order.createdAt)}
+                    </td>
                     <td>
                       <span className={`badge ${statusTone(order.status)}`}>{order.status}</span>
                     </td>
                     <td>{order.promoCode ? <code style={{ backgroundColor: "#f3f4f6", padding: "2px 6px", borderRadius: 4 }}>{order.promoCode}</code> : <span style={{ color: "#d1d5db" }}>—</span>}</td>
+                    <td style={{ textAlign: "right", color: "#ef4444", fontVariantNumeric: "tabular-nums" }}>
+                      {order.discountAmount > 0 ? `- ${currency(order.discountAmount)} đ` : "—"}
+                    </td>
                     <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 500 }}>
                       {currency(order.finalAmount)} đ
                     </td>
                     <td style={{ textAlign: "center" }}>
-                      <div style={{ display: "flex", justifyContent: "center", gap: 8 }}> 
+                      <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
                         <button
                           type="button"
                           className="icon-btn"
-                          onClick={() => alert(`Xem chi tiết đơn ${order.id}`)}
-                          title="Xem chi tiết"
-                          style={{ color: "#6366f1" }}
-                        >
-                          <Eye size={16} /> 
-                        </button>                     
-                        <button
-                          type="button"
-                          className="icon-btn"
-                          onClick={() => openEdit(order)}
+                          onClick={() => handleEditClick(order)}
                           aria-label={`Sửa ${order.id}`}
                           title="Sửa đơn hàng"
                         >
@@ -429,140 +447,71 @@ export default function OrderManagement() {
               </div>
 
               <div className="modal__body">
-                <div className="form-grid form-grid--2">
-                  {/* Mã khách hàng */}
-                  <div className="field">
-                    <label style={{ display: "block", marginBottom: 6 }}>
-                      Mã khách hàng <span style={{ color: "#ef4444" }}>*</span>
-                    </label>
-                    <CustomerAutocomplete
-                      value={form.customerId}
-                      onChange={(customerId) => {
-                        setForm((s) => ({ ...s, customerId: customerId || "" }));
-                      }}
-                      placeholder="Nhập mã khách (C000001) - 8 ký tự"
-                      error={errors.customerId}
-                    />
+                {error && (
+                  <div className="alert alert--danger" style={{ marginBottom: 16, padding: '10px 12px', fontSize: '13px', backgroundColor: "#fee2e2", color: "#b91c1c", borderRadius: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <AlertTriangle size={16} />
+                      <strong>Lỗi Database:</strong> <span>{error}</span>
+                    </div>
                   </div>
+                )}
+                {editingId ? (
+                  /* EDIT MODE - Chỉ sửa Status + Promo Code */
+                  <div className="form-grid form-grid--2">
+                    {/* Trạng thái */}
+                    <div className="field">
+                      <label htmlFor="form-status">
+                        Trạng thái <span style={{ color: "#ef4444" }}>*</span>
+                      </label>
+                      <select
+                        id="form-status"
+                        value={form.status}
+                        onChange={(event) => setForm((s) => ({ ...s, status: event.target.value }))}
+                      >
+                        {statusList.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                  {/* Trạng thái */}
-                  <div className="field">
-                    <label htmlFor="form-status">
-                      Trạng thái <span style={{ color: "#ef4444" }}>*</span>
-                    </label>
-                    <select
-                      id="form-status"
-                      value={form.status}
-                      onChange={(event) => setForm((s) => ({ ...s, status: event.target.value }))}
-                      disabled={!editingId}
-                    >
-                      {statusList.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
+                    {/* Mã khuyến mãi */}
+                    <div className="field">
+                      <label htmlFor="form-promo">Mã khuyến mãi (VD: P001, P010)</label>
+                      <input
+                        id="form-promo"
+                        type="text"
+                        value={form.promoCode}
+                        onChange={(event) => setForm((s) => ({ ...s, promoCode: event.target.value.toUpperCase() }))}
+                        placeholder="VD: P001, P010"
+                      />
+                    </div>
                   </div>
-
-                  {/* Tổng tiền */}
-                  {!editingId && (
+                ) : (
+                  /* CREATE MODE - Chỉ nhập Mã khách hàng */
+                  <div className="form-grid form-grid--1">
+                    {/* Mã khách hàng */}
                     <div className="field">
-                      <label htmlFor="form-total">
-                        Tổng tiền gốc <span style={{ color: "#ef4444" }}>*</span>
+                      <label style={{ display: "block", marginBottom: 6 }}>
+                        Mã khách hàng <span style={{ color: "#ef4444" }}>*</span>
                       </label>
-                      <input
-                        id="form-total"
-                        type="text"
-                        inputMode="numeric"
-                        value={form.totalAmount}
-                        onChange={(event) => setForm((s) => ({ ...s, totalAmount: event.target.value }))}
-                        placeholder="VD: 500000"
-                        className={errors.totalAmount ? "is-error" : ""}
-                      />
-                      {errors.totalAmount && <span className="field__error">❌ {errors.totalAmount}</span>}
-                      {form.totalAmount && !errors.totalAmount && (
-                        <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>
-                          {currency(parseNumber(form.totalAmount))} đ
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Số tiền giảm */}
-                  {!editingId && (
-                    <div className="field">
-                      <label htmlFor="form-discount">
-                        Số tiền giảm <span style={{ color: "#ef4444" }}>*</span>
-                      </label>
-                      <input
-                        id="form-discount"
-                        type="text"
-                        inputMode="numeric"
-                        value={form.discountAmount}
-                        onChange={(event) => setForm((s) => ({ ...s, discountAmount: event.target.value }))}
-                        placeholder="VD: 20000"
-                        className={errors.discountAmount ? "is-error" : ""}
-                      />
-                      {errors.discountAmount && <span className="field__error">❌ {errors.discountAmount}</span>}
-                      {form.discountAmount && !errors.discountAmount && (
-                        <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>
-                          {currency(parseNumber(form.discountAmount))} đ
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Tổng tiền cuối (readonly) */}
-                  {!editingId && (
-                    <div className="field">
-                      <label htmlFor="form-final" style={{ color: "#14b8a6", fontWeight: 600 }}>
-                        Tổng tiền cuối (tự động)
-                      </label>
-                      <input
-                        id="form-final"
-                        type="text"
-                        readOnly
-                        value={currency(finalAmount)}
-                        style={{ backgroundColor: "#f0fdf4", cursor: "not-allowed", fontWeight: 600, color: "#14b8a6" }}
+                      <CustomerAutocomplete
+                        value={form.customerId}
+                        onChange={(customerId) => {
+                          setForm((s) => ({ ...s, customerId: customerId || "" }));
+                        }}
+                        placeholder="Nhập mã khách (C000001) - 8 ký tự"
+                        error={errors.customerId}
                       />
                     </div>
-                  )}
-
-                  {/* Mã khuyến mãi */}
-                  <div className="field">
-                    <label htmlFor="form-promo">Mã khuyến mãi (tùy chọn)</label>
-                    <input
-                      id="form-promo"
-                      type="text"
-                      value={form.promoCode}
-                      onChange={(event) => setForm((s) => ({ ...s, promoCode: event.target.value.toUpperCase() }))}
-                      placeholder="VD: KM01, SUMMER2026"
-                      disabled={!editingId}
-                    />
                   </div>
+                )}
 
-                  {/* Ngày tạo */}
-                  {!editingId && (
-                    <div className="field">
-                      <label htmlFor="form-date">
-                        Ngày tạo <span style={{ color: "#ef4444" }}>*</span>
-                      </label>
-                      <input
-                        id="form-date"
-                        type="date"
-                        value={form.createdAt}
-                        onChange={(event) => setForm((s) => ({ ...s, createdAt: event.target.value }))}
-                        className={errors.createdAt ? "is-error" : ""}
-                      />
-                      {errors.createdAt && <span className="field__error">❌ {errors.createdAt}</span>}
-                    </div>
-                  )}
-                </div>
-
-                {/* Ghi chú */}
+                {/* Ghi chú khi edit */}
                 {editingId && (
                   <div style={{ padding: "12px", backgroundColor: "#fef3c7", borderRadius: 8, marginTop: 16, fontSize: "0.9rem", color: "#92400e" }}>
-                    Chỉ có thể thay đổi trạng thái và mã khuyến mãi. Để sửa thông tin khác, vui lòng xóa và tạo đơn mới.
+                    ℹ️ Chỉ có thể thay đổi trạng thái và mã khuyến mãi. Để sửa thông tin khác, vui lòng xóa và tạo đơn mới.
                   </div>
                 )}
               </div>
@@ -597,6 +546,14 @@ export default function OrderManagement() {
                 </div>
               </div>
             </div>
+            
+            {error && (
+              <div className="modal__body" style={{ paddingBottom: 0 }}>
+                <div className="alert alert--danger" style={{ padding: '8px 10px', fontSize: '13px', backgroundColor: "#fee2e2", color: "#b91c1c", borderRadius: 8 }}>
+                   <strong>Lỗi Database:</strong> {error}
+                </div>
+              </div>
+            )}
 
             <div className="modal__footer">
               <button type="button" className="btn btn--secondary" onClick={() => setConfirmDialog(null)}>
@@ -607,6 +564,70 @@ export default function OrderManagement() {
                   ✓ Xác nhận xóa
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {/* MODAL CHI TIẾT ĐƠN HÀNG */}
+      {detailsModalOpen && viewingOrder ? (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: 800 }}>
+            <div className="modal__header">
+              <h2>Chi tiết đơn hàng: {viewingOrder.id}</h2>
+              <button type="button" className="close-btn" onClick={closeDetailsModal} style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer" }}>
+                &times;
+              </button>
+            </div>
+            <div className="modal__body">
+              {detailsLoading ? (
+                <div style={{ padding: "20px", textAlign: "center", color: "#6b7280" }}>
+                  Đang tải chi tiết đơn hàng...
+                </div>
+              ) : orderDetails.length === 0 ? (
+                <div style={{ padding: "20px", textAlign: "center", color: "#6b7280" }}>
+                  Đơn hàng này không có sản phẩm nào.
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table" style={{ marginBottom: 0 }}>
+                    <thead>
+                      <tr>
+                        <th>Mã SP</th>
+                        <th>Tên sản phẩm (Tạm thời)</th>
+                        <th style={{ textAlign: "right" }}>Số lượng</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orderDetails.map((item, idx) => (
+                        <tr key={idx}>
+                          <td style={{ color: "#6b7280" }}>{item.productId}</td>
+                          <td style={{ fontWeight: 500 }}>{item.productName}</td>
+                          <td style={{ textAlign: "right" }}>{item.quantity}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr style={{ backgroundColor: "#f9fafb" }}>
+                        <td colSpan="2" style={{ textAlign: "right", fontWeight: 600 }}>Tổng tiền:</td>
+                        <td style={{ textAlign: "right", fontWeight: 600 }}>{currency(viewingOrder.totalAmount)} đ</td>
+                      </tr>
+                      <tr style={{ backgroundColor: "#f9fafb" }}>
+                        <td colSpan="2" style={{ textAlign: "right", fontWeight: 600 }}>Số tiền giảm:</td>
+                        <td style={{ textAlign: "right", fontWeight: 600, color: "#ef4444" }}>- {currency(viewingOrder.discountAmount)} đ</td>
+                      </tr>
+                      <tr style={{ backgroundColor: "#f9fafb" }}>
+                        <td colSpan="2" style={{ textAlign: "right", fontWeight: 700, fontSize: "1.1rem" }}>Số tiền cuối:</td>
+                        <td style={{ textAlign: "right", fontWeight: 700, fontSize: "1.1rem", color: "#14b8a6" }}>{currency(viewingOrder.finalAmount)} đ</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
+            <div className="modal__footer">
+              <button type="button" className="btn btn--secondary" onClick={closeDetailsModal}>
+                Đóng
+              </button>
             </div>
           </div>
         </div>
