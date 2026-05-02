@@ -61,7 +61,7 @@ export default function App() {
         </main>
 
         <footer className="app-footer">
-          <span>CineManager © 2026</span>
+          <span>CineB © 2026</span>
         </footer>
       </div>
     </div>

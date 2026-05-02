@@ -270,13 +270,13 @@ export default function ReportDashboardPage() {
       {
         label: "Hiệu suất trung bình",
         value: `${Number(stats?.avgPerf || 0).toFixed(1)}%`,
-        note:  "Tính bởi fn_PhanTichHieuSuatPhong",
+        note:  "",
         Icon:  PercentCircle,
       },
       {
         label: "Suất đạt ngưỡng TỐT",
         value: `${goodCount} / ${showtimes.length}`,
-        note:  `${goodPct}% suất ≥ 70% lấp đầy`,
+        note:  `Tốt nếu tỉ lệ suất ≥ 70% lấp đầy`,
         Icon:  CheckCircle2,
       },
     ];
@@ -311,7 +311,7 @@ export default function ReportDashboardPage() {
       <div className="page__header">
         <div>
           <h1>Hiệu suất phòng</h1>
-          <p>Phân tích từ <code style={{ fontSize: "0.8rem", background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>fn_PhanTichHieuSuatPhong</code></p>
+          <p>Phân tích từ vận hành trực tiếp</p>
         </div>
         <div className="page__actions">
           <button
@@ -446,7 +446,7 @@ export default function ReportDashboardPage() {
           <div className="section-head">
             <div>
               <h2>Hiệu suất từng suất chiếu</h2>
-              <p>Tỷ lệ lấp đầy ghế, phân màu theo ngưỡng 40% / 70%.</p>
+              <p>Tỷ lệ lấp đầy ghế, phân màu theo ngưỡng.</p>
             </div>
           </div>
           <div className="chart-shell">
@@ -482,7 +482,6 @@ export default function ReportDashboardPage() {
             <div className="section-head" style={{ marginBottom: 0 }}>
               <div>
                 <h2>Chi tiết suất chiếu</h2>
-                <p>Dữ liệu thực từ bảng SHOWTIME + SEAT_SHOWTIME.</p>
               </div>
             </div>
           </div>

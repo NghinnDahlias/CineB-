@@ -185,7 +185,7 @@ export default function Dashboard() {
 
     return [
       {
-        label: "Khách hàng active",
+        label: "Khách hàng hoạt động tháng",
         value: formatNumber(total),
         note: customerNote,           // "3 mới · 5 quay lại"
         icon: Users,
