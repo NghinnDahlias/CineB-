@@ -30,8 +30,8 @@ export default function Sidebar({ items, activePage, onNavigate, open, onClose }
               <Clapperboard size={20} />
             </div>
             <div className="sidebar__brand-text">
-              <strong>CineManager</strong>
-              <span>Bộ công cụ vận hành</span>
+              <strong>CineB</strong>
+              <span>Trung tâm quản lý giao dịch và hiệu suất rạp</span>
             </div>
 
             <button type="button" className="icon-btn sidebar__mobile-close" onClick={onClose} aria-label="Đóng menu">

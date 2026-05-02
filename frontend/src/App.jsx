@@ -6,18 +6,24 @@ import OrderManagement from "./components/OrderManagement";
 import PerformanceReport from "./components/PerformanceReport";
 import CustomerHistory from "./components/CustomerHistory";
 import TopMovieStats from "./components/TopMovieStats";
+import ReportDashboardPage from "./components/ReportDashboardPage";
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "Trang chủ", icon: "dashboard" },
   { id: "orders", label: "Đơn hàng", icon: "orders" },
   { id: "performance", label: "Hiệu suất", icon: "performance" },
+  // Thêm mục này vào:
+  { id: "room-performance", label: "Hiệu suất phòng", icon: "room" }, 
   { id: "customers", label: "Khách hàng", icon: "customers" },
   { id: "movies", label: "Phim", icon: "movies" },
 ];
 
+
+
 const PAGE_COMPONENTS = {
   dashboard: Dashboard,
   orders: OrderManagement,
+  "room-performance": ReportDashboardPage,
   performance: PerformanceReport,
   customers: CustomerHistory,
   movies: TopMovieStats,
@@ -55,7 +61,7 @@ export default function App() {
         </main>
 
         <footer className="app-footer">
-          <span>CineManager © 2026</span>
+          <span>CineB © 2026</span>
         </footer>
       </div>
     </div>

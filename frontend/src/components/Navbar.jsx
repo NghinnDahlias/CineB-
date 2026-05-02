@@ -13,13 +13,13 @@ export default function Navbar({ onMenuClick, searchValue, onSearchChange }) {
           <Menu size={18} />
         </button>
 
-        <div className="app-navbar__brand" aria-label="CineManager">
+        <div className="app-navbar__brand" aria-label="CineB">
           <div className="app-navbar__brand-mark" aria-hidden="true">
             <Clapperboard size={18} />
           </div>
           <div className="app-navbar__title">
-            <strong>CineManager</strong>
-            <span>Trung tâm quản lý rạp</span>
+            <strong>CineB</strong>
+            <span>Trung tâm quản lý giao dịch và hiệu suất rạp</span>
           </div>
         </div>
       </div>

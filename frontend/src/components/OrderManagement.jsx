@@ -90,10 +90,9 @@ export default function OrderManagement() {
   const filteredOrders = useMemo(() => {
     const search = query.trim().toLowerCase();
     let result = orders.filter((order) => {
-      const matchesSearch = !search || 
-        [order.id, order.customerId, order.promoCode, order.customerName].some((value) =>
-          String(value || "").toLowerCase().includes(search)
-        );
+      const matchesSearch = !search || [order.id, order.customerId, order.customerName, order.promoCode].some((value) =>
+        String(value || "").toLowerCase().includes(search)
+      );
       const matchesStatus = statusFilter === "Tất cả" || order.status === statusFilter;
       return matchesSearch && matchesStatus;
     });

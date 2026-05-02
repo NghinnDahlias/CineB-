@@ -1,4 +1,38 @@
-CREATE OR ALTER PROCEDURE sp_TraCuuLichSuKhachHang
+USE CineB;
+GO
+
+-- ==========================================================
+-- 1. SP TÌM KIẾM KHÁCH HÀNG (Dùng cho thanh tìm kiếm trên Web)
+-- ==========================================================
+IF OBJECT_ID('dbo.sp_TimKiemKhachHang', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_TimKiemKhachHang;
+GO
+
+CREATE PROCEDURE dbo.sp_TimKiemKhachHang
+    @TuKhoa NVARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    SELECT 
+        [MÃ SỐ KHÁCH HÀNG] AS [Mã KH], 
+        ISNULL([HỌ VÀ TÊN ĐỆM], '') + ' ' + ISNULL([TÊN], '') AS [Tên Khách Hàng], 
+        [SỐ ĐIỆN THOẠI] AS [Số Điện Thoại]
+    FROM [CUSTOMER] 
+    WHERE [HỌ VÀ TÊN ĐỆM] LIKE N'%' + @TuKhoa + N'%'
+       OR [TÊN] LIKE N'%' + @TuKhoa + N'%'
+       OR [SỐ ĐIỆN THOẠI] LIKE '%' + @TuKhoa + '%';
+END
+GO
+
+-- ==========================================================
+-- 2. SP TRA CỨU LỊCH SỬ THEO ID (Dùng khi click chọn 1 khách hàng)
+-- ==========================================================
+IF OBJECT_ID('dbo.sp_TraCuuLichSuKhachHang', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_TraCuuLichSuKhachHang;
+GO
+
+CREATE PROCEDURE dbo.sp_TraCuuLichSuKhachHang
     @MaSoKhachHang NCHAR(8),
     @TuNgay DATE = NULL,
     @DenNgay DATE = NULL
@@ -48,10 +82,16 @@ BEGIN
 END
 GO
 
+-- ==========================================================
+-- 3. SP THỐNG KÊ TOP PHIM 
+-- ==========================================================
+IF OBJECT_ID('dbo.sp_ThongKeTopPhim', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_ThongKeTopPhim;
+GO
 
-CREATE OR ALTER PROCEDURE sp_ThongKeTopPhim
-    @Thang INT,
-    @Nam INT,
+CREATE PROCEDURE dbo.sp_ThongKeTopPhim
+    @Thang INT = NULL,  -- Cho phép để trống (NULL)
+    @Nam INT = NULL,    -- Cho phép để trống (NULL)
     @TopN INT = 5,
     @DoanhThuToiThieu NUMERIC(18,0) = 0
 AS
@@ -83,7 +123,6 @@ BEGIN
         WHERE O.[TRẠNG THÁI] = N'ĐÃ THANH TOÁN'
           AND MONTH(ST.[NGÀY CHIẾU]) = @Thang AND YEAR(ST.[NGÀY CHIẾU]) = @Nam
         GROUP BY ST.[MÃ PHIM]
-        -- Thêm vào CTE VeBanRa
         HAVING SUM(P.[GIÁ VÉ]) >= @DoanhThuToiThieu
     ),
    
@@ -107,7 +146,6 @@ BEGIN
         GROUP BY OM.[MÃ PHIM]
     )
     
-   
     SELECT TOP (@TopN)
         M.[MÃ PHIM] AS [Mã Phim],
         TRIM(M.[TÊN PHIM]) AS [Tên Phim],

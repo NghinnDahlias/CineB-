@@ -7,6 +7,8 @@ const express = require("express");
 const { poolPromise } = require("./db.js");
 const sql = require("mssql");
 
+const customerService = require("./CustomerService.js"); 
+
 const router = express.Router();
 
 /**
@@ -69,6 +71,42 @@ router.get("/", async (req, res) => {
   }
 });
 
+/**
+ * ==============================================================
+ * 2. API MỚI: TÌM KIẾM KHÁCH HÀNG THEO TÊN / SĐT (Gọi SP)
+ * GET /api/customers/search?keyword=...
+ * Lưu ý: Phải đặt trên router.get("/:id")
+ * ==============================================================
+ */
+router.get("/search", async (req, res) => {
+  try {
+    const keyword = req.query.keyword || "";
+    // Gọi SP sp_TimKiemKhachHang thông qua service
+    const data = await customerService.searchCustomers(keyword);
+    res.json(data);
+  } catch (err) {
+    console.error("❌ GET /api/customers/search error:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+/**
+ * ==============================================================
+ * 3. API MỚI: LẤY LỊCH SỬ GIAO DỊCH (Gọi SP)
+ * GET /api/customers/:id/history?from=...&to=...
+ * ==============================================================
+ */
+router.get("/:id/history", async (req, res) => {
+  try {
+    const customerId = req.params.id;
+    const { from, to } = req.query;
+    // Gọi SP sp_TraCuuLichSuKhachHang thông qua service
+    const data = await customerService.getCustomerHistory(customerId, from, to);
+    res.json(data);
+  } catch (err) {
+    console.error("❌ GET /api/customers/:id/history error:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
 /**
  * GET /api/customers/:id
  * Lấy chi tiết 1 khách hàng
