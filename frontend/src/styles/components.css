@@ -65,7 +65,7 @@
 
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 24px;
 }
 
@@ -301,6 +301,10 @@
   gap: 16px;
 }
 
+.form-grid--1 {
+  grid-template-columns: 1fr;
+}
+
 .form-grid--2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -419,6 +423,7 @@
 
 .modal__body {
   padding: 24px;
+  min-height: 300px; /* Expand to show at least 3-4 suggestions comfortably */
 }
 
 .modal__footer {
@@ -427,6 +432,9 @@
   gap: 12px;
   border-bottom: 0;
   border-top: 1px solid var(--border-light);
+  position: relative;
+  z-index: 20;
+  background: #fff;
 }
 
 .progress-list {
@@ -462,6 +470,7 @@
 }
 
 @media (max-width: 1024px) {
+
   .stat-grid,
   .grid-3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -484,6 +493,7 @@
 }
 
 @media (max-width: 640px) {
+
   .stat-grid,
   .grid-3 {
     grid-template-columns: 1fr;
@@ -498,6 +508,9 @@
     padding-left: 16px;
     padding-right: 16px;
   }
+  .modal__body {
+    min-height: 250px; /* Slightly smaller for mobile */
+  }
 
   .table thead th,
   .table tbody td {
@@ -509,6 +522,7 @@
     min-height: 260px;
   }
 }
+
 /**
  * frontend/src/components/CustomerAutocomplete.css
  */
@@ -560,6 +574,7 @@
   from {
     transform: translateY(-50%) rotate(0deg);
   }
+
   to {
     transform: translateY(-50%) rotate(360deg);
   }
@@ -575,7 +590,7 @@
   border: 1px solid #e5e7eb;
   border-top: none;
   border-radius: 0 0 6px 6px;
-  max-height: 250px;
+  max-height: 180px;
   overflow-y: auto;
   z-index: 10;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);

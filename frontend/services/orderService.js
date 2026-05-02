@@ -33,4 +33,18 @@ export const orderService = {
   async remove(orderId) {
     await axios.delete(`${BASE_URL}/api/orders/${orderId}`);
   },
+  async getPromotions() {
+    const res = await axios.get(`${BASE_URL}/api/orders/promotions`);
+    return res.data;
+  },
+  async getDetails(orderId) {
+    const res = await axios.get(`${BASE_URL}/api/orders/${orderId}/details`);
+    return res.data.map((item) => ({
+      productId: item["MÃ SẢN PHẨM"],
+      quantity: item["SỐ LƯỢNG SẢN PHẨM"],
+      productName: "Sản phẩm: " + item["MÃ SẢN PHẨM"],
+      unitPrice: 0, 
+      totalPrice: 0,
+    }));
+  },
 };

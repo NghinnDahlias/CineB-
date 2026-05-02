@@ -7,12 +7,10 @@ const { poolPromise } = require("../db.js");
 
 /**
  * Helper: Pad string với spaces để khớp với NCHAR(N) trong SQL
- * NCHAR yêu cầu đúng độ dài, nếu ít hơn thì pad spaces
  */
 function padNChar(str, length) {
   if (!str) str = '';
   const s = String(str).trim();
-  // Pad spaces từ bên phải
   return (s + ' '.repeat(length)).substring(0, length);
 }
 
@@ -22,7 +20,6 @@ function nullIfEmptyString(v) {
   return v;
 }
 
-/** Danh sách đơn (cho bảng frontend) */
 /** Danh sách đơn (có kèm tên khách hàng) */
 async function listOrders() {
   const pool = await poolPromise;
@@ -34,7 +31,7 @@ async function listOrders() {
       O.[TỔNG TIỀN]        AS totalAmount,
       O.[SỐ TIỀN GIẢM]     AS discountAmount,
       O.[SỐ TIỀN CUỐI]     AS finalAmount,
-      O.[NGÀY TẠO]         AS createdAt,
+      CONVERT(VARCHAR, O.[NGÀY TẠO], 120) AS createdAt,
       O.[TRẠNG THÁI]       AS status,
       O.[MÃ KHUYẾN MÃI]    AS promoCode
     FROM dbo.[ORDER] O
@@ -46,57 +43,30 @@ async function listOrders() {
 
 /**
  * INSERT — EXEC dbo.sp_ThemOrder
- * @param {{ maKhachHang: string}} p
+ * Đã xóa bỏ các Error check của Node.js để SQL Server tự kiểm tra và quăng lỗi (RAISERROR/THROW).
  */
 async function insertOrder(p) {
   const pool = await poolPromise;
   const request = pool.request();
 
-  // Validate
   let maKhachHang = String(p.maKhachHang ?? "").trim();
-  if (!maKhachHang) {
-    throw new Error("Mã khách hàng là bắt buộc");
-  }
-  if (maKhachHang.length > 8) {
-    throw new Error("Mã khách hàng tối đa 8 ký tự");
-  }
- 
-  // Pad theo NCHAR(8) nếu SQL định nghĩa như vậy
-  // Nếu SQL dùng NVARCHAR(8), bỏ padding
-  // ⚠️ CHECK: xem procedure sp_ThemOrder định nghĩa @MaKhachHang sao
-  const paddedMaKhachHang = padNChar(maKhachHang, 8);
   
+  // Vẫn thực hiện padding để đúng định dạng tham số procedure yêu cầu
+  const paddedMaKhachHang = padNChar(maKhachHang, 8);
   request.input("MaKhachHang", sql.NVarChar(8), paddedMaKhachHang);
   
-  try {
-    await request.execute("sp_ThemOrder");
-  } catch (err) {
-    // Nếu lỗi từ SQL (RAISERROR), extract message
-    throw new Error(err.message || "Lỗi thêm đơn hàng");
-  }
+  await request.execute("sp_ThemOrder");
 }
-
-//   await request.execute("sp_ThemOrder");
-// }
 
 /**
  * UPDATE — EXEC dbo.sp_CapNhatOrder
- * NULL = giữ nguyên (theo procedure)
- * @param {{ maDonHang: string, trangThai?: string|null, maKhuyenMai?: string|null }} p
+ * Đã xóa bỏ các Error check của Node.js để SQL Server tự kiểm tra và quăng lỗi.
  */
 async function updateOrder(p) {
   const pool = await poolPromise;
   const request = pool.request();
-  // Validate maDonHang
+  
   let maDonHang = String(p.maDonHang ?? "").trim();
-  if (!maDonHang) {
-    throw new Error("Mã đơn hàng là bắt buộc");
-  }
-  if (maDonHang.length > 6) {
-    throw new Error("Mã đơn hàng tối đa 6 ký tự");
-  }
- 
-  // Pad theo NCHAR(6)
   const paddedMaDonHang = padNChar(maDonHang, 6);
   request.input("MaDonHang", sql.NChar(6), paddedMaDonHang);
   
@@ -106,42 +76,58 @@ async function updateOrder(p) {
   const mkm = nullIfEmptyString(p.maKhuyenMai);
   request.input("MaKhuyenMai", sql.NVarChar(4), mkm);
   
-  try {
-    await request.execute("sp_CapNhatOrder");
-  } catch (err) {
-    throw new Error(err.message || "Lỗi cập nhật đơn hàng");
-  }
+  await request.execute("sp_CapNhatOrder");
 }
 
 /**
  * DELETE — EXEC dbo.sp_XoaOrder
- * @param {string} maDonHang
+ * Đã xóa bỏ các Error check của Node.js để SQL Server tự kiểm tra và quăng lỗi.
  */
 async function deleteOrder(maDonHang) {
   const pool = await poolPromise;
   const request = pool.request();
-  // Validate
+  
   let cleanId = String(maDonHang ?? "").trim();
-  if (!cleanId) {
-    throw new Error("Mã đơn hàng là bắt buộc");
-  }
-  if (cleanId.length > 6) {
-    throw new Error("Mã đơn hàng tối đa 6 ký tự");
-  }
- 
   const paddedMaDonHang = padNChar(cleanId, 6);
   request.input("MaDonHang", sql.NChar(6), paddedMaDonHang);
   
-  try {
-    await request.execute("sp_XoaOrder");
-  } catch (err) {
-    throw new Error(err.message || "Lỗi xóa đơn hàng");
+  await request.execute("sp_XoaOrder");
+}
+
+/** Lấy danh sách mã khuyến mãi đang hoạt động */
+async function listPromotions() {
+  const pool = await poolPromise;
+  const result = await pool.request().query(`
+    SELECT [MÃ KHUYẾN MÃI] AS promoCode, [TÊN CHƯƠNG TRÌNH] AS promoName
+    FROM dbo.PROMOTION
+    WHERE [TRẠNG THÁI] = N'HOẠT ĐỘNG'
+    ORDER BY [MÃ KHUYẾN MÃI] ASC;
+  `);
+  return result.recordset;
+}
+
+/** Lấy chi tiết đơn hàng bằng Stored Procedure */
+async function getOrderDetails(maDonHang) {
+  const pool = await poolPromise;
+  const request = pool.request();
+  
+  // Sử dụng NVarChar(6) thay vì NChar(6) để tránh lỗi padding
+  let cleanId = String(maDonHang ?? "").trim();
+  if (cleanId && !cleanId.startsWith("O")) {
+    cleanId = "O" + cleanId;
   }
+  request.input("MaDonHang", sql.NVarChar(6), cleanId);
+  
+  // Gọi procedure sp_GetOrderDetails
+  const result = await request.execute("sp_GetOrderDetails");
+  return result.recordset;
 }
 
 module.exports = {
   listOrders,
   insertOrder,
   updateOrder,
-  deleteOrder
+  deleteOrder,
+  listPromotions,
+  getOrderDetails
 };
