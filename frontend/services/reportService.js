@@ -1,11 +1,12 @@
 import axios from 'axios';
- 
+
 const BASE_URL = 'http://localhost:3000';
 
 function getErrorMessage(error, fallback) {
   return error?.response?.data?.error || error?.message || fallback;
 }
  
+
 export const reportService = {
   getDashboard: async (params = {}) => {
     const res = await axios.get(`${BASE_URL}/api/reports/dashboard`, { params });
@@ -27,12 +28,10 @@ export const reportService = {
     return Array.isArray(res.data) ? res.data : [];
   },
 
-  // getCustomerHistory: async (customerId, params = {}) => {
-  //   const res = await axios.get(`${BASE_URL}/api/reports/customers/${customerId}/history`, { params });
-  //   return Array.isArray(res.data) ? res.data : [];
-  // },
-  getCustomerHistory(params) {
-    return api.get("/customers/history", { params });
+  // ĐÃ SỬA: Khớp chuẩn với API Backend chúng ta vừa tạo
+  getCustomerHistory: async (customerId, params = {}) => {
+    const res = await axios.get(`${BASE_URL}/api/customers/${customerId}/history`, { params });
+    return Array.isArray(res.data) ? res.data : [];
   },
  
   getCinemas: async () => {

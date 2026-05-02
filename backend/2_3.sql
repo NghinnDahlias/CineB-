@@ -90,8 +90,8 @@ IF OBJECT_ID('dbo.sp_ThongKeTopPhim', 'P') IS NOT NULL
 GO
 
 CREATE PROCEDURE dbo.sp_ThongKeTopPhim
-    @Thang INT,
-    @Nam INT,
+    @Thang INT = NULL,  -- Cho phép để trống (NULL)
+    @Nam INT = NULL,    -- Cho phép để trống (NULL)
     @TopN INT = 5,
     @DoanhThuToiThieu NUMERIC(18,0) = 0
 AS
